@@ -329,10 +329,16 @@ function AuthScreen({onLogin}) {
       if (password.length<4) { setErr("Contraseña mínimo 4 caracteres"); setLoading(false); return; }
       const isFirstUser = users.length === 0;
       const newUser = { username:username.trim(), password, displayName:displayName.trim(), isAdmin: isFirstUser };
-      await db("users",[...users,newUser]);
-      onLogin(newUser);
+      const updatedUsers = [...users, newUser];
+      await db("users", updatedUsers);
+      // Re-read from DB to ensure we get exactly what was saved
+      const savedUsers = await db("users") || updatedUsers;
+      const savedUser = savedUsers.find(u => u.username === newUser.username) || newUser;
+      onLogin(savedUser);
     } else {
-      const u = users.find(u=>u.username.toLowerCase()===username.toLowerCase()&&u.password===password);
+      // Always reload users fresh from DB to get latest isAdmin flag
+      const freshUsers = await db("users") || [];
+      const u = freshUsers.find(u=>u.username.toLowerCase()===username.toLowerCase()&&u.password===password);
       if (!u) { setErr("Usuario o contraseña incorrectos"); setLoading(false); return; }
       onLogin(u);
     }
