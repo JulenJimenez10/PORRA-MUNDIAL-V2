@@ -4,52 +4,80 @@ import { useState, useEffect } from "react";
 // DATA
 // ─────────────────────────────────────────────
 const GROUPS = {
-  A: ["Qatar","Ecuador","Senegal","Países Bajos"],
-  B: ["Inglaterra","Irán","EE.UU.","Gales"],
-  C: ["Argentina","Arabia Saudí","México","Polonia"],
-  D: ["Francia","Australia","Dinamarca","Túnez"],
-  E: ["España","Costa Rica","Alemania","Japón"],
-  F: ["Bélgica","Canadá","Marruecos","Croacia"],
-  G: ["Brasil","Serbia","Suiza","Camerún"],
-  H: ["Portugal","Ghana","Uruguay","Corea del Sur"],
+  A: ["México","Corea del Sur","Sudáfrica","Rep. Checa"],
+  B: ["Canadá","Suiza","Qatar","Bosnia"],
+  C: ["Brasil","Marruecos","Escocia","Haití"],
+  D: ["EE.UU.","Australia","Paraguay","Turquía"],
+  E: ["Alemania","Ecuador","Costa de Marfil","Curazao"],
+  F: ["Países Bajos","Japón","Túnez","Suecia"],
+  G: ["Bélgica","Irán","Egipto","Nueva Zelanda"],
+  H: ["España","Uruguay","Arabia Saudí","Cabo Verde"],
+  I: ["Francia","Senegal","Noruega","Irak"],
+  J: ["Argentina","Austria","Argelia","Jordania"],
+  K: ["Portugal","Colombia","Uzbekistán","R.D. Congo"],
+  L: ["Inglaterra","Croacia","Panamá","Ghana"],
 };
 
 const FLAGS = {
-  "Qatar":"🇶🇦","Ecuador":"🇪🇨","Senegal":"🇸🇳","Países Bajos":"🇳🇱",
-  "Inglaterra":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Irán":"🇮🇷","EE.UU.":"🇺🇸","Gales":"🏴󠁧󠁢󠁷󠁬󠁳󠁿",
-  "Argentina":"🇦🇷","Arabia Saudí":"🇸🇦","México":"🇲🇽","Polonia":"🇵🇱",
-  "Francia":"🇫🇷","Australia":"🇦🇺","Dinamarca":"🇩🇰","Túnez":"🇹🇳",
-  "España":"🇪🇸","Costa Rica":"🇨🇷","Alemania":"🇩🇪","Japón":"🇯🇵",
-  "Bélgica":"🇧🇪","Canadá":"🇨🇦","Marruecos":"🇲🇦","Croacia":"🇭🇷",
-  "Brasil":"🇧🇷","Serbia":"🇷🇸","Suiza":"🇨🇭","Camerún":"🇨🇲",
-  "Portugal":"🇵🇹","Ghana":"🇬🇭","Uruguay":"🇺🇾","Corea del Sur":"🇰🇷",
+  "México":"🇲🇽","Corea del Sur":"🇰🇷","Sudáfrica":"🇿🇦","Rep. Checa":"🇨🇿",
+  "Canadá":"🇨🇦","Suiza":"🇨🇭","Qatar":"🇶🇦","Bosnia":"🇧🇦",
+  "Brasil":"🇧🇷","Marruecos":"🇲🇦","Escocia":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Haití":"🇭🇹",
+  "EE.UU.":"🇺🇸","Australia":"🇦🇺","Paraguay":"🇵🇾","Turquía":"🇹🇷",
+  "Alemania":"🇩🇪","Ecuador":"🇪🇨","Costa de Marfil":"🇨🇮","Curazao":"🇨🇼",
+  "Países Bajos":"🇳🇱","Japón":"🇯🇵","Túnez":"🇹🇳","Suecia":"🇸🇪",
+  "Bélgica":"🇧🇪","Irán":"🇮🇷","Egipto":"🇪🇬","Nueva Zelanda":"🇳🇿",
+  "España":"🇪🇸","Uruguay":"🇺🇾","Arabia Saudí":"🇸🇦","Cabo Verde":"🇨🇻",
+  "Francia":"🇫🇷","Senegal":"🇸🇳","Noruega":"🇳🇴","Irak":"🇮🇶",
+  "Argentina":"🇦🇷","Austria":"🇦🇹","Argelia":"🇩🇿","Jordania":"🇯🇴",
+  "Portugal":"🇵🇹","Colombia":"🇨🇴","Uzbekistán":"🇺🇿","R.D. Congo":"🇨🇩",
+  "Inglaterra":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Croacia":"🇭🇷","Panamá":"🇵🇦","Ghana":"🇬🇭",
 };
 
 const TEAMS = Object.values(GROUPS).flat().sort();
 
 const GROUP_MATCHES = [];
 const matchDefs = [
-  ["A","Qatar","Ecuador"],["A","Senegal","Países Bajos"],["A","Qatar","Senegal"],
-  ["A","Países Bajos","Ecuador"],["A","Países Bajos","Qatar"],["A","Ecuador","Senegal"],
-  ["B","Inglaterra","Irán"],["B","EE.UU.","Gales"],["B","Gales","Irán"],
-  ["B","Inglaterra","EE.UU."],["B","Gales","Inglaterra"],["B","Irán","EE.UU."],
-  ["C","Argentina","Arabia Saudí"],["C","México","Polonia"],["C","Polonia","Arabia Saudí"],
-  ["C","Argentina","México"],["C","Polonia","Argentina"],["C","Arabia Saudí","México"],
-  ["D","Dinamarca","Túnez"],["D","Francia","Australia"],["D","Túnez","Australia"],
-  ["D","Francia","Dinamarca"],["D","Australia","Dinamarca"],["D","Túnez","Francia"],
-  ["E","Alemania","Japón"],["E","España","Costa Rica"],["E","Japón","Costa Rica"],
-  ["E","España","Alemania"],["E","Japón","España"],["E","Costa Rica","Alemania"],
-  ["F","Marruecos","Croacia"],["F","Bélgica","Canadá"],["F","Bélgica","Marruecos"],
-  ["F","Croacia","Canadá"],["F","Croacia","Bélgica"],["F","Canadá","Marruecos"],
-  ["G","Suiza","Camerún"],["G","Brasil","Serbia"],["G","Camerún","Serbia"],
-  ["G","Brasil","Suiza"],["G","Serbia","Suiza"],["G","Camerún","Brasil"],
-  ["H","Uruguay","Corea del Sur"],["H","Portugal","Ghana"],["H","Corea del Sur","Ghana"],
-  ["H","Portugal","Uruguay"],["H","Ghana","Uruguay"],["H","Corea del Sur","Portugal"],
+  // Grupo A
+  ["A","México","Sudáfrica"],["A","Corea del Sur","Rep. Checa"],["A","México","Corea del Sur"],
+  ["A","Sudáfrica","Rep. Checa"],["A","Rep. Checa","México"],["A","Sudáfrica","Corea del Sur"],
+  // Grupo B
+  ["B","Canadá","Bosnia"],["B","Qatar","Suiza"],["B","Canadá","Qatar"],
+  ["B","Suiza","Bosnia"],["B","Bosnia","Canadá"],["B","Suiza","Qatar"],
+  // Grupo C
+  ["C","Haití","Escocia"],["C","Brasil","Marruecos"],["C","Escocia","Marruecos"],
+  ["C","Brasil","Haití"],["C","Marruecos","Brasil"],["C","Escocia","Haití"],
+  // Grupo D
+  ["D","EE.UU.","Paraguay"],["D","Australia","Turquía"],["D","EE.UU.","Australia"],
+  ["D","Turquía","Paraguay"],["D","Paraguay","EE.UU."],["D","Turquía","Australia"],
+  // Grupo E
+  ["E","Alemania","Curazao"],["E","Costa de Marfil","Ecuador"],["E","Alemania","Costa de Marfil"],
+  ["E","Ecuador","Curazao"],["E","Curazao","Alemania"],["E","Costa de Marfil","Ecuador"],
+  // Grupo F
+  ["F","Países Bajos","Japón"],["F","Suecia","Túnez"],["F","Países Bajos","Suecia"],
+  ["F","Túnez","Japón"],["F","Japón","Países Bajos"],["F","Túnez","Suecia"],
+  // Grupo G
+  ["G","Bélgica","Egipto"],["G","Irán","Nueva Zelanda"],["G","Bélgica","Irán"],
+  ["G","Nueva Zelanda","Egipto"],["G","Egipto","Bélgica"],["G","Nueva Zelanda","Irán"],
+  // Grupo H
+  ["H","España","Cabo Verde"],["H","Arabia Saudí","Uruguay"],["H","España","Arabia Saudí"],
+  ["H","Uruguay","Cabo Verde"],["H","Cabo Verde","España"],["H","Arabia Saudí","Uruguay"],
+  // Grupo I
+  ["I","Francia","Senegal"],["I","Irak","Noruega"],["I","Francia","Irak"],
+  ["I","Noruega","Senegal"],["I","Senegal","Francia"],["I","Noruega","Irak"],
+  // Grupo J
+  ["J","Argentina","Argelia"],["J","Austria","Jordania"],["J","Argentina","Austria"],
+  ["J","Jordania","Argelia"],["J","Argelia","Argentina"],["J","Jordania","Austria"],
+  // Grupo K
+  ["K","Portugal","R.D. Congo"],["K","Uzbekistán","Colombia"],["K","Portugal","Uzbekistán"],
+  ["K","Colombia","R.D. Congo"],["K","R.D. Congo","Portugal"],["K","Colombia","Uzbekistán"],
+  // Grupo L
+  ["L","Inglaterra","Croacia"],["L","Ghana","Panamá"],["L","Inglaterra","Ghana"],
+  ["L","Panamá","Croacia"],["L","Croacia","Inglaterra"],["L","Panamá","Ghana"],
 ];
 matchDefs.forEach(([g,h,a],i) => GROUP_MATCHES.push({ id:`g${i+1}`, group:g, home:h, away:a, round:"groups" }));
 
-const MULT = { groups:1, r16:2, qf:3, sf:4, final:5 };
-const ROUND_LABEL = { groups:"Fase de Grupos", r16:"Octavos", qf:"Cuartos", sf:"Semifinales", final:"Final" };
+const MULT = { groups:1, r32:2, r16:3, qf:4, sf:5, final:6 };
+const ROUND_LABEL = { groups:"Fase de Grupos", r32:"Dieciseisavos", r16:"Octavos", qf:"Cuartos", sf:"Semifinales", final:"Final" };
 
 // ─────────────────────────────────────────────
 // SCORING
@@ -79,13 +107,13 @@ function scoreSpecials(userSpec, actual) {
 // ─────────────────────────────────────────────
 // STORAGE
 // ─────────────────────────────────────────────
-async function db(key, val, shared=true) {
+async function db(key, val) {
   try {
     if (val===undefined) {
-      const r = await window.storage.get(key, shared);
-      return r ? JSON.parse(r.value) : null;
+      const r = localStorage.getItem(key);
+      return r ? JSON.parse(r) : null;
     }
-    await window.storage.set(key, JSON.stringify(val), shared);
+    localStorage.setItem(key, JSON.stringify(val));
     return val;
   } catch { return null; }
 }
@@ -244,7 +272,8 @@ function AuthScreen({onLogin}) {
         setErr("Ese usuario ya existe"); setLoading(false); return;
       }
       if (password.length<4) { setErr("Contraseña mínimo 4 caracteres"); setLoading(false); return; }
-      const newUser = { username:username.trim(), password, displayName:displayName.trim(), isAdmin: username.trim().toLowerCase()==="admin" };
+      const isFirstUser = users.length === 0;
+      const newUser = { username:username.trim(), password, displayName:displayName.trim(), isAdmin: isFirstUser };
       await db("users",[...users,newUser]);
       onLogin(newUser);
     } else {
@@ -295,7 +324,7 @@ function AuthScreen({onLogin}) {
           </button>
         </div>
         <p style={{color:C.faint,fontSize:11,textAlign:"center",marginTop:16}}>
-          {mode==="login"?"¿No tienes cuenta? Regístrate arriba.":"El primer usuario en registrarse con nombre 'admin' será el administrador."}
+          {mode==="login"?"¿No tienes cuenta? Regístrate arriba.":"El primer usuario en registrarse será el administrador."}
         </p>
       </div>
     </div>
@@ -788,8 +817,8 @@ function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked
         <p style={{color:C.faint,fontSize:12,margin:"0 0 12px"}}>Añade los cruces según se conocen. Puedes añadir el resultado al mismo tiempo o después.</p>
         <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>
           <select value={ko.round} onChange={e=>setKo(k=>({...k,round:e.target.value}))} style={{...inp,width:"auto",flex:"none"}}>
-            <option value="r16">Octavos</option><option value="qf">Cuartos</option>
-            <option value="sf">Semis</option><option value="final">Final</option>
+            <option value="r32">Dieciseisavos</option><option value="r16">Octavos</option>
+            <option value="qf">Cuartos</option><option value="sf">Semis</option><option value="final">Final</option>
           </select>
           <select value={ko.home} onChange={e=>setKo(k=>({...k,home:e.target.value}))} style={{...inp,flex:1,minWidth:120}}>
             <option value="">Local...</option>
