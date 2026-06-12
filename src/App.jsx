@@ -761,6 +761,145 @@ function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked
   );
 }
 
+
+// ─────────────────────────────────────────────
+// PREDICCIONES (ver las de otros)
+// ─────────────────────────────────────────────
+function VerPredicciones({currentUser, users, predictions, specials, results, groupsLocked}) {
+  const [selected, setSelected] = useState("");
+
+  const otherUsers = users.filter(u => u.username !== currentUser.username);
+  const selectedUser = users.find(u => u.username === selected);
+  const userPreds = predictions.filter(p => p.username === selected);
+  const getPred = (matchId) => userPreds.find(p => p.match_id === matchId);
+  const userSpec = specials.find(s => s.username === selected) || {};
+  const koMatches = results.knockoutMatches || [];
+
+  return (
+    <div style={{paddingBottom:40}}>
+      <SectionTitle>🔍 Predicciones</SectionTitle>
+
+      {!groupsLocked && (
+        <Alert>🔒 Las predicciones de los demás se desbloquean cuando el admin cierre el plazo.</Alert>
+      )}
+
+      {groupsLocked && (
+        <>
+          <div style={{...card, marginBottom:20}}>
+            <label style={{color:C.muted, fontSize:12, letterSpacing:1, textTransform:"uppercase", display:"block", marginBottom:8}}>Ver predicciones de:</label>
+            <select value={selected} onChange={e=>setSelected(e.target.value)} style={{...inp}}>
+              <option value="">— Elige un jugador —</option>
+              {users.filter(u=>u.username!==currentUser.username).map(u=>(
+                <option key={u.username} value={u.username}>{u.display_name||u.username}</option>
+              ))}
+            </select>
+          </div>
+
+          {selected && (
+            <>
+              <div style={{...card, marginBottom:20, background:"rgba(240,192,64,0.08)", border:`1px solid ${C.goldBorder}`, display:"flex", alignItems:"center", gap:12}}>
+                <span style={{fontSize:28}}>👤</span>
+                <div>
+                  <div style={{fontWeight:800, fontSize:17, color:C.gold}}>{selectedUser?.display_name||selected}</div>
+                  <div style={{fontSize:12, color:C.faint}}>Predicciones fase de grupos</div>
+                </div>
+              </div>
+
+              {Object.entries({A:1,B:1,C:1,D:1,E:1,F:1,G:1,H:1,I:1,J:1,K:1,L:1}).map(([grp])=>(
+                <div key={grp} style={{marginBottom:24}}>
+                  <div style={{fontSize:11,fontWeight:700,color:C.gold,letterSpacing:3,textTransform:"uppercase",margin:"0 0 10px"}}>Grupo {grp}</div>
+                  {GROUP_MATCHES.filter(m=>m.group===grp).map(m=>{
+                    const pred = getPred(m.id);
+                    const res = results[m.id];
+                    const pts = pred && res?.home_score!=null ? scoreMatch(pred, res, m.round) : null;
+                    const maxPts = 3*(MULT[m.round]||1);
+                    const bg = pts===maxPts?"rgba(61,214,140,0.07)":pts>0?"rgba(240,192,64,0.07)":pts===0&&res?"rgba(248,113,113,0.06)":C.surface;
+                    return (
+                      <div key={m.id} style={{...card, padding:"8px 12px", marginBottom:6, background:bg}}>
+                        {(m.date||m.city) && (
+                          <div style={{fontSize:10,color:C.faint,marginBottom:5,display:"flex",gap:8}}>
+                            {m.date&&<span>📅 {m.date}</span>}
+                            {m.time&&<span>🕐 {m.time}h</span>}
+                            {m.city&&<span>📍 {m.city}</span>}
+                          </div>
+                        )}
+                        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                          <span style={{flex:1,fontSize:13,fontWeight:600,color:C.text,minWidth:90}}>{FLAGS[m.home]||""} {m.home}</span>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <div style={{width:44,padding:"7px 4px",textAlign:"center",background:"rgba(255,255,255,0.04)",border:`1px solid ${C.border}`,borderRadius:8,color:C.text,fontSize:17,fontWeight:700}}>
+                              {pred?.home_score??"-"}
+                            </div>
+                            <span style={{color:C.gold,fontWeight:900,fontSize:16}}>:</span>
+                            <div style={{width:44,padding:"7px 4px",textAlign:"center",background:"rgba(255,255,255,0.04)",border:`1px solid ${C.border}`,borderRadius:8,color:C.text,fontSize:17,fontWeight:700}}>
+                              {pred?.away_score??"-"}
+                            </div>
+                          </div>
+                          <span style={{flex:1,fontSize:13,fontWeight:600,color:C.text,textAlign:"right",minWidth:90}}>{m.away} {FLAGS[m.away]||""}</span>
+                          {res?.home_score!=null && (
+                            <span style={{fontSize:11,minWidth:70,textAlign:"right",color:pts===maxPts?C.green:pts>0?C.gold:C.red}}>
+                              {res.home_score}:{res.away_score} {pts!=null?`+${pts}p`:""}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+
+              {koMatches.length > 0 && (
+                <div style={{marginBottom:24}}>
+                  {Object.entries(ROUND_LABEL).filter(([r])=>r!=="groups").map(([round,label])=>{
+                    const ms = koMatches.filter(m=>m.round===round);
+                    if (!ms.length) return null;
+                    return (
+                      <div key={round} style={{marginBottom:20}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,margin:"0 0 10px"}}>
+                          <span style={{fontSize:11,fontWeight:700,color:C.gold,letterSpacing:3,textTransform:"uppercase"}}>{label}</span>
+                          <Tag>×{MULT[round]}</Tag>
+                        </div>
+                        {ms.map(m=>{
+                          const pred = getPred(m.id);
+                          const res = results[m.id];
+                          const pts = pred && res?.home_score!=null ? scoreMatch(pred, res, m.round) : null;
+                          const maxPts = 3*(MULT[m.round]||1);
+                          const bg = pts===maxPts?"rgba(61,214,140,0.07)":pts>0?"rgba(240,192,64,0.07)":pts===0&&res?"rgba(248,113,113,0.06)":C.surface;
+                          return (
+                            <div key={m.id} style={{...card,padding:"8px 12px",marginBottom:6,background:bg,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                              <span style={{flex:1,fontSize:13,fontWeight:600,color:C.text,minWidth:90}}>{FLAGS[m.home]||""} {m.home}</span>
+                              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                                <div style={{width:44,padding:"7px 4px",textAlign:"center",background:"rgba(255,255,255,0.04)",border:`1px solid ${C.border}`,borderRadius:8,color:C.text,fontSize:17,fontWeight:700}}>{pred?.home_score??"-"}</div>
+                                <span style={{color:C.gold,fontWeight:900,fontSize:16}}>:</span>
+                                <div style={{width:44,padding:"7px 4px",textAlign:"center",background:"rgba(255,255,255,0.04)",border:`1px solid ${C.border}`,borderRadius:8,color:C.text,fontSize:17,fontWeight:700}}>{pred?.away_score??"-"}</div>
+                              </div>
+                              <span style={{flex:1,fontSize:13,fontWeight:600,color:C.text,textAlign:"right",minWidth:90}}>{m.away} {FLAGS[m.away]||""}</span>
+                              {res?.home_score!=null&&<span style={{fontSize:11,minWidth:70,textAlign:"right",color:pts===maxPts?C.green:pts>0?C.gold:C.red}}>{res.home_score}:{res.away_score} {pts!=null?`+${pts}p`:""}</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div style={card}>
+                <div style={{fontSize:11,fontWeight:700,color:C.gold,letterSpacing:3,textTransform:"uppercase",marginBottom:12}}>🌟 Especiales</div>
+                {[{f:"champion",l:"🏆 Campeón"},{f:"runner_up",l:"🥈 Subcampeón"},{f:"third",l:"🥉 3er puesto"},{f:"top_scorer",l:"⚽ Pichichi"},{f:"mvp",l:"⭐ MVP"}].map(({f,l})=>(
+                  <div key={f} style={{display:"flex",justifyContent:"space-between",padding:"9px 0",borderBottom:`1px solid ${C.border}`,fontSize:13}}>
+                    <span style={{color:C.muted}}>{l}</span>
+                    <span style={{color:C.text,fontWeight:600}}>{userSpec[f]||"—"}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────
 // APP
 // ─────────────────────────────────────────────
@@ -771,6 +910,7 @@ const ALL_TABS = [
   {id:"eliminatoria",label:"🥊 Eliminatoria"},
   {id:"especiales",label:"🌟 Especiales"},
   {id:"historial",label:"📊 Historial"},
+  {id:"predicciones",label:"🔍 Predicciones"},
 ];
 
 export default function App() {
@@ -859,6 +999,7 @@ export default function App() {
         {tab==="eliminatoria"&&<Eliminatoria currentUser={user} predictions={predictions} setPredictions={setPredictions} results={results}/>}
         {tab==="especiales"&&<PredEspeciales currentUser={user} specials={specials} setSpecials={setSpecials} locked={groupsLocked} actualSpecials={actualSpecials}/>}
         {tab==="historial"&&<Historial currentUser={user} predictions={predictions} results={results} specials={specials} actualSpecials={actualSpecials}/>}
+        {tab==="predicciones"&&<VerPredicciones currentUser={user} users={users} predictions={predictions} specials={specials} results={results} groupsLocked={groupsLocked}/>}
         {tab==="admin"&&user.is_admin&&<Admin results={results} setResults={setResults} actualSpecials={actualSpecials} setActualSpecials={setActualSpecials} groupsLocked={groupsLocked} setGroupsLocked={setGroupsLocked}/>}
       </div>
     </div>
