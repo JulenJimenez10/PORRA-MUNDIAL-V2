@@ -762,6 +762,97 @@ function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked
 }
 
 
+
+// ─────────────────────────────────────────────
+// PARTIDOS DEL DÍA
+// ─────────────────────────────────────────────
+function PartidosDelDia({users, predictions, results}) {
+  const today = new Date();
+  const day = today.getDate();
+  const month = today.getMonth() + 1; // 1-based
+
+  const monthNames = ["","ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+
+  const todayMatches = GROUP_MATCHES.filter(m => {
+    if (!m.date) return false;
+    const parts = m.date.split(" ");
+    const mDay = parseInt(parts[0]);
+    const mMonth = monthNames.indexOf(parts[1]);
+    return mDay === day && mMonth === month;
+  });
+
+  const usernames = users.map(u => u.username);
+
+  return (
+    <div style={{paddingBottom:40}}>
+      <SectionTitle>📅 Partidos del día</SectionTitle>
+
+      {todayMatches.length === 0 && (
+        <div style={{...card, textAlign:"center", padding:48}}>
+          <div style={{fontSize:44, marginBottom:12}}>🏖️</div>
+          <p style={{color:C.muted, margin:0}}>Hoy no hay partidos. ¡Descansa!</p>
+        </div>
+      )}
+
+      {todayMatches.map(m => {
+        const res = results[m.id];
+        return (
+          <div key={m.id} style={{...card, marginBottom:20}}>
+            {/* Match header */}
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
+              <div style={{display:"flex", gap:8, alignItems:"center"}}>
+                <span style={{fontSize:11, fontWeight:700, color:C.gold, letterSpacing:2}}>GRUPO {m.group}</span>
+                <Tag>🕐 {m.time}h</Tag>
+                <Tag>📍 {m.city}</Tag>
+              </div>
+              {res?.home_score != null && (
+                <div style={{fontSize:18, fontWeight:900, color:C.green}}>
+                  {res.home_score} - {res.away_score}
+                </div>
+              )}
+            </div>
+
+            {/* Teams */}
+            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, padding:"10px 0", borderTop:`1px solid ${C.border}`, borderBottom:`1px solid ${C.border}`}}>
+              <span style={{fontSize:16, fontWeight:700, color:C.text}}>{FLAGS[m.home]||""} {m.home}</span>
+              <span style={{fontSize:13, color:C.muted}}>vs</span>
+              <span style={{fontSize:16, fontWeight:700, color:C.text}}>{m.away} {FLAGS[m.away]||""}</span>
+            </div>
+
+            {/* Predictions per user */}
+            <div style={{fontSize:11, fontWeight:700, color:C.muted, letterSpacing:2, textTransform:"uppercase", marginBottom:8}}>Predicciones</div>
+            <div style={{display:"flex", flexDirection:"column", gap:5}}>
+              {users.map(u => {
+                const pred = predictions.find(p => p.username === u.username && p.match_id === m.id);
+                if (!pred) return null;
+                const pts = res?.home_score != null ? scoreMatch(pred, res, m.round) : null;
+                const maxPts = 3*(MULT[m.round]||1);
+                const bg = pts===maxPts?"rgba(61,214,140,0.07)":pts>0?"rgba(240,192,64,0.07)":pts===0&&res?"rgba(248,113,113,0.06)":"rgba(255,255,255,0.03)";
+                const ptColor = pts===maxPts?C.green:pts>0?C.gold:res?C.red:C.faint;
+                return (
+                  <div key={u.username} style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 10px", borderRadius:8, background:bg}}>
+                    <span style={{fontSize:13, color:C.text, fontWeight:500}}>{u.display_name||u.username}</span>
+                    <div style={{display:"flex", alignItems:"center", gap:12}}>
+                      <span style={{fontSize:14, fontWeight:700, color:C.text}}>
+                        {pred.home_score} : {pred.away_score}
+                      </span>
+                      {pts != null && (
+                        <span style={{fontSize:12, fontWeight:700, color:ptColor, minWidth:40, textAlign:"right"}}>
+                          +{pts}p
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────
 // PREDICCIONES (ver las de otros)
 // ─────────────────────────────────────────────
@@ -906,6 +997,7 @@ function VerPredicciones({currentUser, users, predictions, specials, results, gr
 const ALL_TABS = [
   {id:"instrucciones",label:"📖 Reglas"},
   {id:"clasificacion",label:"🏆 Clasificación"},
+  {id:"partidos",label:"📅 Hoy"},
   {id:"grupos",label:"⚽ Grupos"},
   {id:"eliminatoria",label:"🥊 Eliminatoria"},
   {id:"especiales",label:"🌟 Especiales"},
@@ -999,6 +1091,7 @@ export default function App() {
         {tab==="eliminatoria"&&<Eliminatoria currentUser={user} predictions={predictions} setPredictions={setPredictions} results={results}/>}
         {tab==="especiales"&&<PredEspeciales currentUser={user} specials={specials} setSpecials={setSpecials} locked={groupsLocked} actualSpecials={actualSpecials}/>}
         {tab==="historial"&&<Historial currentUser={user} predictions={predictions} results={results} specials={specials} actualSpecials={actualSpecials}/>}
+        {tab==="partidos"&&<PartidosDelDia users={users} predictions={predictions} results={results}/> }
         {tab==="predicciones"&&<VerPredicciones currentUser={user} users={users} predictions={predictions} specials={specials} results={results} groupsLocked={groupsLocked}/>}
         {tab==="admin"&&user.is_admin&&<Admin results={results} setResults={setResults} actualSpecials={actualSpecials} setActualSpecials={setActualSpecials} groupsLocked={groupsLocked} setGroupsLocked={setGroupsLocked}/>}
       </div>
