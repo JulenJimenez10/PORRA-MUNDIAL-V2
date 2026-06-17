@@ -5,6 +5,46 @@ const SUPABASE_URL = "https://mllsraobvkoydfyfmklp.supabase.co";
 const SUPABASE_KEY = "sb_publishable_v7-TyZzQrhBqUnc4KLmsvw_yjTu7gvs";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const FOOTBALL_API_KEY = "cbb1f9c867ab447994b4c69e6171ce05";
+const WC2026_ID = "2000"; // FIFA World Cup 2026 competition ID
+
+// Map football-data.org team names to our app names
+const TEAM_MAP = {
+  "Mexico": "México", "Korea Republic": "Corea del Sur", "South Africa": "Sudáfrica",
+  "Czech Republic": "Rep. Checa", "Czechia": "Rep. Checa",
+  "Canada": "Canadá", "Switzerland": "Suiza", "Qatar": "Qatar", "Bosnia and Herzegovina": "Bosnia",
+  "Brazil": "Brasil", "Morocco": "Marruecos", "Scotland": "Escocia", "Haiti": "Haití",
+  "USA": "EE.UU.", "United States": "EE.UU.", "Australia": "Australia",
+  "Paraguay": "Paraguay", "Turkey": "Turquía", "Türkiye": "Turquía",
+  "Germany": "Alemania", "Ecuador": "Ecuador", "Ivory Coast": "Costa de Marfil",
+  "Côte d'Ivoire": "Costa de Marfil", "Curaçao": "Curazao",
+  "Netherlands": "Países Bajos", "Japan": "Japón", "Tunisia": "Túnez", "Sweden": "Suecia",
+  "Belgium": "Bélgica", "Iran": "Irán", "Egypt": "Egipto", "New Zealand": "Nueva Zelanda",
+  "Spain": "España", "Uruguay": "Uruguay", "Saudi Arabia": "Arabia Saudí", "Cabo Verde": "Cabo Verde",
+  "France": "Francia", "Senegal": "Senegal", "Norway": "Noruega", "Iraq": "Irak",
+  "Argentina": "Argentina", "Austria": "Austria", "Algeria": "Argelia", "Jordan": "Jordania",
+  "Portugal": "Portugal", "Colombia": "Colombia", "Uzbekistan": "Uzbekistán",
+  "DR Congo": "R.D. Congo", "Congo DR": "R.D. Congo",
+  "England": "Inglaterra", "Croatia": "Croacia", "Panama": "Panamá", "Ghana": "Ghana",
+  "Korea Republic": "Corea del Sur",
+};
+
+function mapTeam(name) {
+  return TEAM_MAP[name] || name;
+}
+
+async function fetchLiveResults() {
+  try {
+    const res = await fetch(
+      `https://api.football-data.org/v4/competitions/${WC2026_ID}/matches?status=FINISHED`,
+      { headers: { "X-Auth-Token": FOOTBALL_API_KEY } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.matches || [];
+  } catch { return null; }
+}
+
 // ─────────────────────────────────────────────
 // DATA
 // ─────────────────────────────────────────────
@@ -1042,8 +1082,64 @@ export default function App() {
       });
       setActualSpecials(specObj);
       setGroupsLocked(stMap.groups_locked==="true");
+
+      // Fetch live results from football-data.org
+      const liveMatches = await fetchLiveResults();
+      if (liveMatches && liveMatches.length > 0) {
+        for (const lm of liveMatches) {
+          const homeTeam = mapTeam(lm.homeTeam?.name || "");
+          const awayTeam = mapTeam(lm.awayTeam?.name || "");
+          const homeScore = lm.score?.fullTime?.home;
+          const awayScore = lm.score?.fullTime?.away;
+          if (homeScore == null || awayScore == null) continue;
+          // Find matching group match
+          const match = GROUP_MATCHES.find(m =>
+            m.home === homeTeam && m.away === awayTeam
+          );
+          if (match && resMap[match.id]?.home_score == null) {
+            await supabase.from("results").upsert(
+              {match_id: match.id, home_score: homeScore, away_score: awayScore},
+              {onConflict: "match_id"}
+            );
+            resMap[match.id] = {home_score: homeScore, away_score: awayScore};
+          }
+        }
+        setResults({...resMap});
+      }
+
       setReady(true);
     })();
+
+    // Refresh every 3 minutes
+    const interval = setInterval(async () => {
+      const liveMatches = await fetchLiveResults();
+      if (!liveMatches) return;
+      const {data:r} = await supabase.from("results").select("*");
+      const resMap = {knockoutMatches:[]};
+      const {data:st} = await supabase.from("settings").select("*");
+      const stMap = {};
+      (st||[]).forEach(row=>{stMap[row.key]=row.value;});
+      if (stMap.knockout_matches) { try { resMap.knockoutMatches=JSON.parse(stMap.knockout_matches); } catch {} }
+      (r||[]).forEach(row=>{resMap[row.match_id]=row;});
+      for (const lm of liveMatches) {
+        const homeTeam = mapTeam(lm.homeTeam?.name || "");
+        const awayTeam = mapTeam(lm.awayTeam?.name || "");
+        const homeScore = lm.score?.fullTime?.home;
+        const awayScore = lm.score?.fullTime?.away;
+        if (homeScore == null || awayScore == null) continue;
+        const match = GROUP_MATCHES.find(m => m.home === homeTeam && m.away === awayTeam);
+        if (match) {
+          await supabase.from("results").upsert(
+            {match_id: match.id, home_score: homeScore, away_score: awayScore},
+            {onConflict: "match_id"}
+          );
+          resMap[match.id] = {home_score: homeScore, away_score: awayScore};
+        }
+      }
+      setResults({...resMap});
+    }, 3 * 60 * 1000);
+
+    return () => clearInterval(interval);
   },[]);
 
   if (!ready) return (
