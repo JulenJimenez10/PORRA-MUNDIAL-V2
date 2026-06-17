@@ -807,18 +807,42 @@ function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked
 // PARTIDOS DEL DÍA
 // ─────────────────────────────────────────────
 function PartidosDelDia({users, predictions, results}) {
-  const today = new Date();
-  const day = today.getDate();
-  const month = today.getMonth() + 1; // 1-based
-
+  const now = new Date();
   const monthNames = ["","ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 
+  // Partidos antes de las 06:00h española se consideran del día anterior
+  // Para el filtro, si son las 05:00h del día 12, mostramos partidos del día 11
+  const displayDate = new Date(now);
+  if (now.getHours() < 6) {
+    displayDate.setDate(displayDate.getDate() - 1);
+  }
+  const day = displayDate.getDate();
+  const month = displayDate.getMonth() + 1;
+
+  // Incluir también los partidos de madrugada del día siguiente (00:00-05:59h)
+  const nextDay = new Date(displayDate);
+  nextDay.setDate(nextDay.getDate() + 1);
+  const nextDayNum = nextDay.getDate();
+  const nextMonth = nextDay.getMonth() + 1;
+
   const todayMatches = GROUP_MATCHES.filter(m => {
-    if (!m.date) return false;
+    if (!m.date || !m.time) return false;
     const parts = m.date.split(" ");
     const mDay = parseInt(parts[0]);
     const mMonth = monthNames.indexOf(parts[1]);
-    return mDay === day && mMonth === month;
+    const mHour = parseInt(m.time.split(":")[0]);
+
+    // Partido del día actual
+    if (mDay === day && mMonth === month) return true;
+    // Partido de madrugada del día siguiente (00:00-05:59h)
+    if (mDay === nextDayNum && mMonth === nextMonth && mHour < 6) return true;
+    return false;
+  }).sort((a,b) => {
+    const [ah, am] = a.time.split(":").map(Number);
+    const [bh, bm] = b.time.split(":").map(Number);
+    const aVal = ah < 6 ? ah + 24 : ah;
+    const bVal = bh < 6 ? bh + 24 : bh;
+    return aVal*60+am - bVal*60+bm;
   });
 
   const usernames = users.map(u => u.username);
