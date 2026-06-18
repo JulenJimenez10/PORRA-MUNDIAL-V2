@@ -82,74 +82,74 @@ const TEAMS = Object.values(GROUPS).flat().sort();
 
 const GROUP_MATCHES = [
   {id:"g1",group:"A",home:"México",away:"Sudáfrica",round:"groups",date:"11 jun",time:"21:00",city:"Ciudad de México"},
-  {id:"g2",group:"A",home:"Corea del Sur",away:"Rep. Checa",round:"groups",date:"12 jun",time:"04:00",city:"Zapopan"},
+  {id:"g2",group:"A",home:"Corea del Sur",away:"Rep. Checa",round:"groups",date:"11 jun",time:"21:00",city:"Guadalajara"},
   {id:"g3",group:"A",home:"Rep. Checa",away:"Sudáfrica",round:"groups",date:"18 jun",time:"18:00",city:"Atlanta"},
-  {id:"g4",group:"A",home:"México",away:"Corea del Sur",round:"groups",date:"19 jun",time:"03:00",city:"Zapopan"},
+  {id:"g4",group:"A",home:"México",away:"Corea del Sur",round:"groups",date:"19 jun",time:"03:00",city:"Guadalajara"},
   {id:"g5",group:"A",home:"Rep. Checa",away:"México",round:"groups",date:"25 jun",time:"03:00",city:"Ciudad de México"},
-  {id:"g6",group:"A",home:"Sudáfrica",away:"Corea del Sur",round:"groups",date:"25 jun",time:"03:00",city:"Guadalupe"},
+  {id:"g6",group:"A",home:"Sudáfrica",away:"Corea del Sur",round:"groups",date:"25 jun",time:"03:00",city:"Guadalajara"},
   {id:"g7",group:"B",home:"Canadá",away:"Bosnia",round:"groups",date:"12 jun",time:"21:00",city:"Toronto"},
-  {id:"g8",group:"B",home:"Qatar",away:"Suiza",round:"groups",date:"13 jun",time:"21:00",city:"Santa Clara"},
-  {id:"g9",group:"B",home:"Suiza",away:"Bosnia",round:"groups",date:"18 jun",time:"21:00",city:"Inglewood"},
+  {id:"g8",group:"B",home:"Qatar",away:"Suiza",round:"groups",date:"13 jun",time:"21:00",city:"San Francisco"},
+  {id:"g9",group:"B",home:"Suiza",away:"Bosnia",round:"groups",date:"18 jun",time:"21:00",city:"Los Ángeles"},
   {id:"g10",group:"B",home:"Canadá",away:"Qatar",round:"groups",date:"19 jun",time:"00:00",city:"Vancouver"},
   {id:"g11",group:"B",home:"Suiza",away:"Canadá",round:"groups",date:"24 jun",time:"21:00",city:"Vancouver"},
   {id:"g12",group:"B",home:"Bosnia",away:"Qatar",round:"groups",date:"24 jun",time:"21:00",city:"Seattle"},
-  {id:"g13",group:"C",home:"Brasil",away:"Marruecos",round:"groups",date:"14 jun",time:"00:00",city:"Nueva Jersey"},
-  {id:"g14",group:"C",home:"Haití",away:"Escocia",round:"groups",date:"14 jun",time:"03:00",city:"Foxborough"},
-  {id:"g15",group:"C",home:"Brasil",away:"Haití",round:"groups",date:"20 jun",time:"00:00",city:"Foxborough"},
-  {id:"g16",group:"C",home:"Escocia",away:"Marruecos",round:"groups",date:"20 jun",time:"03:00",city:"Filadelfia"},
+  {id:"g13",group:"C",home:"Brasil",away:"Marruecos",round:"groups",date:"13 jun",time:"21:00",city:"Nueva Jersey"},
+  {id:"g14",group:"C",home:"Haití",away:"Escocia",round:"groups",date:"13 jun",time:"21:00",city:"Boston"},
+  {id:"g15",group:"C",home:"Brasil",away:"Haití",round:"groups",date:"20 jun",time:"02:30",city:"Filadelfia"},
+  {id:"g16",group:"C",home:"Escocia",away:"Marruecos",round:"groups",date:"20 jun",time:"00:00",city:"Boston"},
   {id:"g17",group:"C",home:"Escocia",away:"Brasil",round:"groups",date:"25 jun",time:"00:00",city:"Miami"},
   {id:"g18",group:"C",home:"Marruecos",away:"Haití",round:"groups",date:"25 jun",time:"00:00",city:"Atlanta"},
-  {id:"g19",group:"D",home:"EE.UU.",away:"Paraguay",round:"groups",date:"13 jun",time:"03:00",city:"Inglewood"},
-  {id:"g20",group:"D",home:"Australia",away:"Turquía",round:"groups",date:"13 jun",time:"06:00",city:"Vancouver"},
-  {id:"g21",group:"D",home:"Turquía",away:"Paraguay",round:"groups",date:"19 jun",time:"06:00",city:"Santa Clara"},
+  {id:"g19",group:"D",home:"EE.UU.",away:"Paraguay",round:"groups",date:"12 jun",time:"21:00",city:"Los Ángeles"},
+  {id:"g20",group:"D",home:"Australia",away:"Turquía",round:"groups",date:"13 jun",time:"21:00",city:"Vancouver"},
+  {id:"g21",group:"D",home:"Turquía",away:"Paraguay",round:"groups",date:"20 jun",time:"05:00",city:"San Francisco"},
   {id:"g22",group:"D",home:"EE.UU.",away:"Australia",round:"groups",date:"19 jun",time:"21:00",city:"Seattle"},
-  {id:"g23",group:"D",home:"Turquía",away:"EE.UU.",round:"groups",date:"26 jun",time:"04:00",city:"Inglewood"},
-  {id:"g24",group:"D",home:"Paraguay",away:"Australia",round:"groups",date:"26 jun",time:"04:00",city:"Santa Clara"},
+  {id:"g23",group:"D",home:"Turquía",away:"EE.UU.",round:"groups",date:"26 jun",time:"04:00",city:"Los Ángeles"},
+  {id:"g24",group:"D",home:"Paraguay",away:"Australia",round:"groups",date:"26 jun",time:"04:00",city:"San Francisco"},
   {id:"g25",group:"E",home:"Alemania",away:"Curazao",round:"groups",date:"14 jun",time:"19:00",city:"Houston"},
-  {id:"g26",group:"E",home:"Costa de Marfil",away:"Ecuador",round:"groups",date:"15 jun",time:"01:00",city:"Filadelfia"},
-  {id:"g27",group:"E",home:"Alemania",away:"Costa de Marfil",round:"groups",date:"21 jun",time:"00:00",city:"Toronto"},
+  {id:"g26",group:"E",home:"Costa de Marfil",away:"Ecuador",round:"groups",date:"14 jun",time:"21:00",city:"Filadelfia"},
+  {id:"g27",group:"E",home:"Alemania",away:"Costa de Marfil",round:"groups",date:"20 jun",time:"22:00",city:"Toronto"},
   {id:"g28",group:"E",home:"Ecuador",away:"Curazao",round:"groups",date:"21 jun",time:"02:00",city:"Kansas City"},
   {id:"g29",group:"E",home:"Ecuador",away:"Alemania",round:"groups",date:"26 jun",time:"00:00",city:"Nueva Jersey"},
   {id:"g30",group:"E",home:"Curazao",away:"Costa de Marfil",round:"groups",date:"26 jun",time:"00:00",city:"Filadelfia"},
-  {id:"g31",group:"F",home:"Países Bajos",away:"Japón",round:"groups",date:"15 jun",time:"00:00",city:"Arlington"},
-  {id:"g32",group:"F",home:"Suecia",away:"Túnez",round:"groups",date:"15 jun",time:"04:00",city:"Guadalupe"},
+  {id:"g31",group:"F",home:"Países Bajos",away:"Japón",round:"groups",date:"14 jun",time:"22:00",city:"Dallas"},
+  {id:"g32",group:"F",home:"Suecia",away:"Túnez",round:"groups",date:"14 jun",time:"21:00",city:"Monterrey"},
   {id:"g33",group:"F",home:"Países Bajos",away:"Suecia",round:"groups",date:"20 jun",time:"19:00",city:"Houston"},
-  {id:"g34",group:"F",home:"Túnez",away:"Japón",round:"groups",date:"20 jun",time:"06:00",city:"Guadalupe"},
+  {id:"g34",group:"F",home:"Túnez",away:"Japón",round:"groups",date:"21 jun",time:"06:00",city:"Monterrey"},
   {id:"g35",group:"F",home:"Túnez",away:"Países Bajos",round:"groups",date:"26 jun",time:"01:00",city:"Kansas City"},
-  {id:"g36",group:"F",home:"Japón",away:"Suecia",round:"groups",date:"26 jun",time:"01:00",city:"Arlington"},
+  {id:"g36",group:"F",home:"Japón",away:"Suecia",round:"groups",date:"26 jun",time:"01:00",city:"Dallas"},
   {id:"g37",group:"G",home:"Bélgica",away:"Egipto",round:"groups",date:"15 jun",time:"21:00",city:"Seattle"},
-  {id:"g38",group:"G",home:"Irán",away:"Nueva Zelanda",round:"groups",date:"16 jun",time:"03:00",city:"Inglewood"},
-  {id:"g39",group:"G",home:"Bélgica",away:"Irán",round:"groups",date:"22 jun",time:"01:00",city:"Inglewood"},
+  {id:"g38",group:"G",home:"Irán",away:"Nueva Zelanda",round:"groups",date:"15 jun",time:"21:00",city:"Los Ángeles"},
+  {id:"g39",group:"G",home:"Bélgica",away:"Irán",round:"groups",date:"21 jun",time:"21:00",city:"Seattle"},
   {id:"g40",group:"G",home:"Nueva Zelanda",away:"Egipto",round:"groups",date:"22 jun",time:"03:00",city:"Vancouver"},
   {id:"g41",group:"G",home:"Nueva Zelanda",away:"Bélgica",round:"groups",date:"27 jun",time:"05:00",city:"Seattle"},
   {id:"g42",group:"G",home:"Egipto",away:"Irán",round:"groups",date:"27 jun",time:"05:00",city:"Vancouver"},
   {id:"g43",group:"H",home:"España",away:"Cabo Verde",round:"groups",date:"15 jun",time:"18:00",city:"Atlanta"},
-  {id:"g44",group:"H",home:"Arabia Saudí",away:"Uruguay",round:"groups",date:"16 jun",time:"00:00",city:"Miami"},
+  {id:"g44",group:"H",home:"Arabia Saudí",away:"Uruguay",round:"groups",date:"15 jun",time:"21:00",city:"Miami"},
   {id:"g45",group:"H",home:"España",away:"Arabia Saudí",round:"groups",date:"21 jun",time:"18:00",city:"Atlanta"},
   {id:"g46",group:"H",home:"Uruguay",away:"Cabo Verde",round:"groups",date:"22 jun",time:"00:00",city:"Miami"},
   {id:"g47",group:"H",home:"Uruguay",away:"España",round:"groups",date:"27 jun",time:"02:00",city:"Zapopan"},
   {id:"g48",group:"H",home:"Cabo Verde",away:"Arabia Saudí",round:"groups",date:"27 jun",time:"02:00",city:"Houston"},
   {id:"g49",group:"I",home:"Francia",away:"Senegal",round:"groups",date:"16 jun",time:"21:00",city:"Nueva Jersey"},
-  {id:"g50",group:"I",home:"Irak",away:"Noruega",round:"groups",date:"17 jun",time:"00:00",city:"Foxborough"},
+  {id:"g50",group:"I",home:"Irak",away:"Noruega",round:"groups",date:"16 jun",time:"21:00",city:"Boston"},
   {id:"g51",group:"I",home:"Francia",away:"Irak",round:"groups",date:"22 jun",time:"23:00",city:"Filadelfia"},
   {id:"g52",group:"I",home:"Noruega",away:"Senegal",round:"groups",date:"23 jun",time:"02:00",city:"Nueva Jersey"},
-  {id:"g53",group:"I",home:"Noruega",away:"Francia",round:"groups",date:"26 jun",time:"21:00",city:"Foxborough"},
+  {id:"g53",group:"I",home:"Noruega",away:"Francia",round:"groups",date:"26 jun",time:"21:00",city:"Boston"},
   {id:"g54",group:"I",home:"Senegal",away:"Irak",round:"groups",date:"26 jun",time:"21:00",city:"Toronto"},
-  {id:"g55",group:"J",home:"Argentina",away:"Argelia",round:"groups",date:"17 jun",time:"03:00",city:"Kansas City"},
-  {id:"g56",group:"J",home:"Austria",away:"Jordania",round:"groups",date:"17 jun",time:"06:00",city:"Santa Clara"},
-  {id:"g57",group:"J",home:"Argentina",away:"Austria",round:"groups",date:"22 jun",time:"19:00",city:"Arlington"},
-  {id:"g58",group:"J",home:"Jordania",away:"Argelia",round:"groups",date:"23 jun",time:"05:00",city:"Santa Clara"},
+  {id:"g55",group:"J",home:"Argentina",away:"Argelia",round:"groups",date:"16 jun",time:"21:00",city:"Kansas City"},
+  {id:"g56",group:"J",home:"Austria",away:"Jordania",round:"groups",date:"16 jun",time:"21:00",city:"San Francisco"},
+  {id:"g57",group:"J",home:"Argentina",away:"Austria",round:"groups",date:"22 jun",time:"19:00",city:"Dallas"},
+  {id:"g58",group:"J",home:"Jordania",away:"Argelia",round:"groups",date:"23 jun",time:"05:00",city:"San Francisco"},
   {id:"g59",group:"J",home:"Jordania",away:"Argentina",round:"groups",date:"28 jun",time:"04:00",city:"Kansas City"},
-  {id:"g60",group:"J",home:"Argelia",away:"Austria",round:"groups",date:"28 jun",time:"04:00",city:"Arlington"},
+  {id:"g60",group:"J",home:"Argelia",away:"Austria",round:"groups",date:"28 jun",time:"04:00",city:"Dallas"},
   {id:"g61",group:"K",home:"Portugal",away:"R.D. Congo",round:"groups",date:"17 jun",time:"19:00",city:"Houston"},
-  {id:"g62",group:"K",home:"Uzbekistán",away:"Colombia",round:"groups",date:"18 jun",time:"04:00",city:"Ciudad de México"},
+  {id:"g62",group:"K",home:"Uzbekistán",away:"Colombia",round:"groups",date:"17 jun",time:"21:00",city:"Ciudad de México"},
   {id:"g63",group:"K",home:"Portugal",away:"Uzbekistán",round:"groups",date:"23 jun",time:"19:00",city:"Houston"},
   {id:"g64",group:"K",home:"Colombia",away:"R.D. Congo",round:"groups",date:"24 jun",time:"04:00",city:"Zapopan"},
   {id:"g65",group:"K",home:"Colombia",away:"Portugal",round:"groups",date:"28 jun",time:"01:30",city:"Miami"},
   {id:"g66",group:"K",home:"R.D. Congo",away:"Uzbekistán",round:"groups",date:"28 jun",time:"01:30",city:"Atlanta"},
-  {id:"g67",group:"L",home:"Inglaterra",away:"Croacia",round:"groups",date:"17 jun",time:"22:00",city:"Arlington"},
-  {id:"g68",group:"L",home:"Ghana",away:"Panamá",round:"groups",date:"18 jun",time:"01:00",city:"Toronto"},
-  {id:"g69",group:"L",home:"Inglaterra",away:"Ghana",round:"groups",date:"23 jun",time:"22:00",city:"Foxborough"},
+  {id:"g67",group:"L",home:"Inglaterra",away:"Croacia",round:"groups",date:"17 jun",time:"22:00",city:"Dallas"},
+  {id:"g68",group:"L",home:"Ghana",away:"Panamá",round:"groups",date:"17 jun",time:"21:00",city:"Toronto"},
+  {id:"g69",group:"L",home:"Inglaterra",away:"Ghana",round:"groups",date:"23 jun",time:"22:00",city:"Boston"},
   {id:"g70",group:"L",home:"Panamá",away:"Croacia",round:"groups",date:"24 jun",time:"01:00",city:"Toronto"},
   {id:"g71",group:"L",home:"Panamá",away:"Inglaterra",round:"groups",date:"27 jun",time:"23:00",city:"Nueva Jersey"},
   {id:"g72",group:"L",home:"Croacia",away:"Ghana",round:"groups",date:"27 jun",time:"23:00",city:"Filadelfia"},
@@ -810,17 +810,17 @@ function PartidosDelDia({users, predictions, results}) {
   const now = new Date();
   const monthNames = ["","ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 
-  // La "jornada" va de las 06:00h de hoy a las 05:59h de mañana (hora española)
-  // Si son menos de las 06:00h, la jornada empezó ayer a las 06:00h
+  // La jornada va de las 00:00h del día X a las 06:01h del día X+1
+  // Si son antes de las 06:01h, seguimos en la jornada de ayer
   const journeyStart = new Date(now);
-  if (now.getHours() < 6) {
+  if (now.getHours() < 6 || (now.getHours() === 6 && now.getMinutes() === 0)) {
     journeyStart.setDate(journeyStart.getDate() - 1);
   }
-  journeyStart.setHours(6, 0, 0, 0);
+  journeyStart.setHours(0, 0, 0, 0);
 
   const journeyEnd = new Date(journeyStart);
   journeyEnd.setDate(journeyEnd.getDate() + 1);
-  journeyEnd.setHours(6, 1, 0, 0); // 06:01h del día siguiente
+  journeyEnd.setHours(6, 1, 0, 0);
 
   // Convierte fecha y hora del partido a objeto Date para comparar
   function matchToDate(m) {
