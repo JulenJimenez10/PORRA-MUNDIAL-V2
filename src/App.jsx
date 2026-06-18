@@ -810,39 +810,37 @@ function PartidosDelDia({users, predictions, results}) {
   const now = new Date();
   const monthNames = ["","ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 
-  // Partidos antes de las 06:00h española se consideran del día anterior
-  // Para el filtro, si son las 05:00h del día 12, mostramos partidos del día 11
-  const displayDate = new Date(now);
+  // La "jornada" va de las 06:00h de hoy a las 05:59h de mañana (hora española)
+  // Si son menos de las 06:00h, la jornada empezó ayer a las 06:00h
+  const journeyStart = new Date(now);
   if (now.getHours() < 6) {
-    displayDate.setDate(displayDate.getDate() - 1);
+    journeyStart.setDate(journeyStart.getDate() - 1);
   }
-  const day = displayDate.getDate();
-  const month = displayDate.getMonth() + 1;
+  journeyStart.setHours(6, 0, 0, 0);
 
-  // Incluir también los partidos de madrugada del día siguiente (00:00-05:59h)
-  const nextDay = new Date(displayDate);
-  nextDay.setDate(nextDay.getDate() + 1);
-  const nextDayNum = nextDay.getDate();
-  const nextMonth = nextDay.getMonth() + 1;
+  const journeyEnd = new Date(journeyStart);
+  journeyEnd.setDate(journeyEnd.getDate() + 1);
+  journeyEnd.setHours(6, 1, 0, 0); // 06:01h del día siguiente
 
-  const todayMatches = GROUP_MATCHES.filter(m => {
-    if (!m.date || !m.time) return false;
+  // Convierte fecha y hora del partido a objeto Date para comparar
+  function matchToDate(m) {
+    if (!m.date || !m.time) return null;
     const parts = m.date.split(" ");
     const mDay = parseInt(parts[0]);
     const mMonth = monthNames.indexOf(parts[1]);
-    const mHour = parseInt(m.time.split(":")[0]);
+    const [mHour, mMin] = m.time.split(":").map(Number);
+    // Año 2026
+    return new Date(2026, mMonth - 1, mDay, mHour, mMin, 0);
+  }
 
-    // Partido del día actual
-    if (mDay === day && mMonth === month) return true;
-    // Partido de madrugada del día siguiente (00:00-05:59h)
-    if (mDay === nextDayNum && mMonth === nextMonth && mHour < 6) return true;
-    return false;
-  }).sort((a,b) => {
-    const [ah, am] = a.time.split(":").map(Number);
-    const [bh, bm] = b.time.split(":").map(Number);
-    const aVal = ah < 6 ? ah + 24 : ah;
-    const bVal = bh < 6 ? bh + 24 : bh;
-    return aVal*60+am - bVal*60+bm;
+  const todayMatches = GROUP_MATCHES.filter(m => {
+    const matchDate = matchToDate(m);
+    if (!matchDate) return false;
+    return matchDate >= journeyStart && matchDate < journeyEnd;
+  }).sort((a, b) => {
+    const da = matchToDate(a);
+    const db = matchToDate(b);
+    return da - db;
   });
 
   const usernames = users.map(u => u.username);
