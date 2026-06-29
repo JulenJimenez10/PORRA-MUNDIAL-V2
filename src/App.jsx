@@ -590,59 +590,144 @@ function PredEspeciales({currentUser,specials,setSpecials,locked,actualSpecials}
 // ─────────────────────────────────────────────
 // ELIMINATORIA
 // ─────────────────────────────────────────────
-function Eliminatoria({currentUser,predictions,setPredictions,results}) {
-  const koMatches=results.knockoutMatches||[];
-  const userPreds=predictions.filter(p=>p.username===currentUser.username);
-  const [local,setLocal]=useState(()=>{const m={};userPreds.forEach(p=>{m[p.match_id]=p;});return m;});
-  const [saved,setSaved]=useState(false);
+function Eliminatoria({currentUser, predictions, setPredictions, results, koLocked, setKoLocked, isAdmin}) {
+  const [selectedRound, setSelectedRound] = useState("r32");
+  const [local, setLocal] = useState({});
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const m = {};
+    predictions.filter(p => p.username === currentUser.username).forEach(p => { m[p.match_id] = p; });
+    setLocal(m);
+  }, [predictions, currentUser.username]);
+
+  const roundMatches = KNOCKOUT_MATCHES.filter(m => m.round === selectedRound);
 
   const save = async () => {
-    for (const [matchId,pred] of Object.entries(local)) {
-      if (pred.home_score===""||pred.away_score===""||pred.home_score==null) continue;
-      await supabase.from("predictions").upsert({username:currentUser.username,match_id:matchId,home_score:parseInt(pred.home_score),away_score:parseInt(pred.away_score)},{onConflict:"username,match_id"});
+    setSaving(true);
+    for (const [matchId, pred] of Object.entries(local)) {
+      if (!KNOCKOUT_MATCHES.find(m => m.id === matchId)) continue;
+      if (pred.home_score === "" || pred.away_score === "" || pred.home_score == null) continue;
+      if (koLocked && koLocked[matchId]) continue;
+      await supabase.from("predictions").upsert({
+        username: currentUser.username, match_id: matchId,
+        home_score: parseInt(pred.home_score), away_score: parseInt(pred.away_score),
+        winner: pred.winner || null,
+      }, {onConflict: "username,match_id"});
     }
-    const {data}=await supabase.from("predictions").select("*");
-    setPredictions(data||[]);
-    setSaved(true); setTimeout(()=>setSaved(false),2000);
+    const {data} = await supabase.from("predictions").select("*");
+    setPredictions(data || []);
+    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000);
   };
 
-  if (koMatches.length===0) return (
-    <div style={{paddingBottom:40}}>
-      <SectionTitle>🥊 Fase Eliminatoria</SectionTitle>
-      <div style={{...card,textAlign:"center",padding:48}}>
-        <div style={{fontSize:44,marginBottom:12}}>⏳</div>
-        <p style={{color:C.muted,margin:0}}>Los cruces aparecerán cuando finalice la fase de grupos.</p>
-      </div>
-    </div>
-  );
+  const toggleLock = async (matchId) => {
+    const newVal = !(koLocked && koLocked[matchId]);
+    const newLocked = {...(koLocked||{}), [matchId]: newVal};
+    await supabase.from("settings").upsert({key:`ko_locked_${matchId}`, value:String(newVal)});
+    setKoLocked(newLocked);
+  };
 
   return (
     <div style={{paddingBottom:40}}>
-      <SectionTitle>🥊 Fase Eliminatoria</SectionTitle>
-      {Object.entries(ROUND_LABEL).filter(([r])=>r!=="groups").map(([round,label])=>{
-        const ms=koMatches.filter(m=>m.round===round);
-        if (!ms.length) return null;
+      <SectionTitle>🥊 Eliminatoria</SectionTitle>
+
+      {/* Round selector */}
+      <div style={{display:"flex", gap:6, marginBottom:20, flexWrap:"wrap"}}>
+        {Object.entries(ROUND_LABEL).filter(([r]) => r !== "groups").map(([round, label]) => (
+          <button key={round} onClick={() => setSelectedRound(round)} style={{
+            padding:"7px 14px", borderRadius:20, border:"none", cursor:"pointer",
+            fontFamily:"inherit", fontSize:12, fontWeight:selectedRound===round?700:400,
+            background:selectedRound===round?C.gold:"rgba(255,255,255,0.07)",
+            color:selectedRound===round?"#0a0d14":C.muted, transition:"all .15s"
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {roundMatches.length === 0 && (
+        <div style={{...card, textAlign:"center", padding:48}}>
+          <div style={{fontSize:44, marginBottom:12}}>⏳</div>
+          <p style={{color:C.muted, margin:0}}>Los cruces de esta ronda aún no se han anunciado.</p>
+        </div>
+      )}
+
+      {roundMatches.map(m => {
+        const locked = koLocked && koLocked[m.id] || false;
+        const pred = local[m.id] || {};
+        const res = results[m.id];
+        const pts = pred && res?.home_score != null ? scoreMatch(pred, res, m.round) : null;
+        const maxPts = 3*(MULT[m.round]||1);
+        const bg = pts===maxPts?"rgba(61,214,140,0.07)":pts>0?"rgba(240,192,64,0.07)":pts===0&&res?"rgba(248,113,113,0.06)":C.surface;
+        const isEmpate = !isNaN(parseInt(pred.home_score)) && !isNaN(parseInt(pred.away_score)) && parseInt(pred.home_score)===parseInt(pred.away_score);
+
         return (
-          <div key={round} style={{marginBottom:24}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,margin:"0 0 10px"}}>
-              <span style={{fontSize:11,fontWeight:700,color:C.gold,letterSpacing:3,textTransform:"uppercase"}}>{label}</span>
-              <Tag>×{MULT[round]}</Tag>
+          <div key={m.id} style={{...card, marginBottom:14, background:bg}}>
+            {/* Header */}
+            <div style={{fontSize:10, color:C.faint, marginBottom:6, display:"flex", gap:8, alignItems:"center", justifyContent:"space-between", flexWrap:"wrap"}}>
+              <div style={{display:"flex", gap:8}}>
+                <span>📅 {m.date}</span>
+                <span>🕐 {m.time}h</span>
+                <span>📍 {m.city}</span>
+              </div>
+              <div style={{display:"flex", gap:6, alignItems:"center"}}>
+                {locked && <Tag color={C.red}>🔒 Cerrado</Tag>}
+                {isAdmin && (
+                  <button onClick={() => toggleLock(m.id)} style={{
+                    ...btnSmall, fontSize:10,
+                    color:locked?C.green:C.red,
+                    borderColor:locked?"rgba(61,214,140,0.3)":"rgba(248,113,113,0.3)",
+                    background:locked?"rgba(61,214,140,0.1)":"rgba(248,113,113,0.1)",
+                  }}>{locked?"🔓 Abrir":"🔒 Cerrar"}</button>
+                )}
+              </div>
             </div>
-            {ms.map(m=>{
-              const res=results[m.id];
-              return <MatchRow key={m.id} match={m} pred={local[m.id]||{}} onChange={v=>setLocal(l=>({...l,[m.id]:v}))} result={res} disabled={res?.home_score!=null}/>;
-            })}
+
+            {/* Scores */}
+            <div style={{display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
+              <span style={{flex:1, fontSize:13, fontWeight:600, color:C.text, minWidth:90}}>{FLAGS[m.home]||""} {m.home}</span>
+              <ScoreBox
+                val={pred}
+                onChange={v => !locked && !res && setLocal(l => ({...l, [m.id]: {...(local[m.id]||{}), ...v, winner: undefined}}))}
+                disabled={locked || res?.home_score != null}
+              />
+              <span style={{flex:1, fontSize:13, fontWeight:600, color:C.text, textAlign:"right", minWidth:90}}>{m.away} {FLAGS[m.away]||""}</span>
+              {res?.home_score != null && (
+                <span style={{fontSize:11, minWidth:70, textAlign:"right", color:pts===maxPts?C.green:pts>0?C.gold:C.red}}>
+                  {res.home_score}:{res.away_score} {pts!=null?`+${pts}p`:""}
+                </span>
+              )}
+            </div>
+
+            {/* Winner selector when draw predicted */}
+            {!locked && !res && isEmpate && (
+              <div style={{marginTop:10, padding:"8px 10px", background:"rgba(240,192,64,0.08)", borderRadius:10, border:`1px solid ${C.goldBorder}`}}>
+                <div style={{fontSize:11, color:C.gold, marginBottom:6, fontWeight:700}}>⚠️ Empate — ¿Quién pasa?</div>
+                <div style={{display:"flex", gap:8}}>
+                  {[{val:"home",label:`${FLAGS[m.home]||""} ${m.home}`},{val:"away",label:`${m.away} ${FLAGS[m.away]||""}`}].map(opt=>(
+                    <button key={opt.val} onClick={()=>setLocal(l=>({...l,[m.id]:{...(l[m.id]||{}),winner:opt.val}}))} style={{
+                      flex:1, padding:"6px 8px", borderRadius:8, border:"none", cursor:"pointer",
+                      fontFamily:"inherit", fontSize:12, fontWeight:pred.winner===opt.val?700:400,
+                      background:pred.winner===opt.val?C.gold:"rgba(255,255,255,0.07)",
+                      color:pred.winner===opt.val?"#0a0d14":C.muted,
+                    }}>{opt.label}</button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         );
       })}
-      <button onClick={save} style={btnGold}>{saved?"✅ Guardado":"Guardar predicciones"}</button>
+
+      {roundMatches.length > 0 && (
+        <button onClick={save} disabled={saving} style={btnGold}>
+          {saving?"Guardando...":saved?"✅ Guardado":"Guardar predicciones"}
+        </button>
+      )}
     </div>
   );
 }
 
-// ─────────────────────────────────────────────
-// HISTORIAL
-// ─────────────────────────────────────────────
+
 function Historial({currentUser,predictions,results,specials,actualSpecials}) {
   const uname=currentUser.username;
   const allM=[...GROUP_MATCHES,...KNOCKOUT_MATCHES];
