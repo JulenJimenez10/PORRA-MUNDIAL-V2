@@ -155,6 +155,26 @@ const GROUP_MATCHES = [
   {id:"g72",group:"L",home:"Croacia",away:"Ghana",round:"groups",date:"27 jun",time:"23:00",city:"Filadelfia"},
 ];
 
+
+const KNOCKOUT_MATCHES = [
+  {id:"r32_1",round:"r32",home:"Sudáfrica",away:"Canadá",date:"28 jun",time:"21:00",city:"Los Ángeles"},
+  {id:"r32_2",round:"r32",home:"Brasil",away:"Japón",date:"29 jun",time:"19:00",city:"Houston"},
+  {id:"r32_3",round:"r32",home:"Alemania",away:"Paraguay",date:"29 jun",time:"22:30",city:"Boston"},
+  {id:"r32_4",round:"r32",home:"Países Bajos",away:"Marruecos",date:"30 jun",time:"03:00",city:"Monterrey"},
+  {id:"r32_5",round:"r32",home:"Costa de Marfil",away:"Noruega",date:"30 jun",time:"19:00",city:"Dallas"},
+  {id:"r32_6",round:"r32",home:"Francia",away:"Suecia",date:"30 jun",time:"23:00",city:"Nueva Jersey"},
+  {id:"r32_7",round:"r32",home:"México",away:"Ecuador",date:"01 jul",time:"03:00",city:"Ciudad de México"},
+  {id:"r32_8",round:"r32",home:"Inglaterra",away:"R.D. Congo",date:"01 jul",time:"18:00",city:"Atlanta"},
+  {id:"r32_9",round:"r32",home:"Bélgica",away:"Senegal",date:"01 jul",time:"22:00",city:"Seattle"},
+  {id:"r32_10",round:"r32",home:"EE.UU.",away:"Bosnia",date:"02 jul",time:"02:00",city:"San Francisco"},
+  {id:"r32_11",round:"r32",home:"España",away:"Austria",date:"02 jul",time:"21:00",city:"Los Ángeles"},
+  {id:"r32_12",round:"r32",home:"Portugal",away:"Croacia",date:"03 jul",time:"01:00",city:"Toronto"},
+  {id:"r32_13",round:"r32",home:"Suiza",away:"Argelia",date:"03 jul",time:"05:00",city:"Vancouver"},
+  {id:"r32_14",round:"r32",home:"Australia",away:"Egipto",date:"03 jul",time:"20:00",city:"Miami"},
+  {id:"r32_15",round:"r32",home:"Argentina",away:"Cabo Verde",date:"04 jul",time:"00:00",city:"Houston"},
+  {id:"r32_16",round:"r32",home:"Colombia",away:"Ghana",date:"04 jul",time:"03:30",city:"Kansas City"},
+];
+
 const MULT = { groups:1, r32:2, r16:3, qf:4, sf:5, final:6 };
 const ROUND_LABEL = { groups:"Fase de Grupos", r32:"Dieciseisavos", r16:"Octavos", qf:"Cuartos", sf:"Semifinales", final:"Final" };
 
@@ -167,7 +187,25 @@ function scoreMatch(pred, result, round) {
   const ph = parseInt(pred.home_score), pa = parseInt(pred.away_score);
   const rh = parseInt(result.home_score), ra = parseInt(result.away_score);
   if (isNaN(ph)||isNaN(pa)) return 0;
+
+  // Exact score (90 min)
   if (ph===rh && pa===ra) return 3*m;
+
+  const isKnockout = round !== "groups";
+
+  if (isKnockout) {
+    // Who actually progressed (from result.winner field or from score)
+    const actualWinner = result.winner || (rh>ra?"home":rh<ra?"away":null);
+    // Who pred thinks progresses
+    let predWinner;
+    if (ph > pa) predWinner = "home";
+    else if (ph < pa) predWinner = "away";
+    else predWinner = pred.winner || null; // empate: usar campo winner
+    if (predWinner && actualWinner && predWinner === actualWinner) return 1*m;
+    return 0;
+  }
+
+  // Groups: just winner/draw
   const pw = ph>pa?"H":ph<pa?"A":"D", rw = rh>ra?"H":rh<ra?"A":"D";
   return pw===rw ? 1*m : 0;
 }
@@ -394,8 +432,7 @@ function Instrucciones() {
 // CLASIFICACIÓN
 // ─────────────────────────────────────────────
 function Clasificacion({users,predictions,results,specials,actualSpecials}) {
-  const koMatches = results.knockoutMatches||[];
-  const allMatches = [...GROUP_MATCHES,...koMatches];
+  const allMatches = [...GROUP_MATCHES,...KNOCKOUT_MATCHES];
   const ranking = users.map(u=>{
     let pts=0,exact=0,correct=0;
     allMatches.forEach(m=>{
@@ -457,6 +494,7 @@ function PredGrupos({currentUser,predictions,setPredictions,results,locked}) {
         match_id: matchId,
         home_score: parseInt(pred.home_score),
         away_score: parseInt(pred.away_score),
+        winner: pred.winner || null,
       }, {onConflict:"username,match_id"});
     }
     const {data} = await supabase.from("predictions").select("*");
@@ -607,8 +645,7 @@ function Eliminatoria({currentUser,predictions,setPredictions,results}) {
 // ─────────────────────────────────────────────
 function Historial({currentUser,predictions,results,specials,actualSpecials}) {
   const uname=currentUser.username;
-  const koMatches=results.knockoutMatches||[];
-  const allM=[...GROUP_MATCHES,...koMatches];
+  const allM=[...GROUP_MATCHES,...KNOCKOUT_MATCHES];
   const rows=allM.map(m=>{
     const pred=predictions.find(p=>p.username===uname&&p.match_id===m.id);
     const res=results[m.id];
@@ -833,7 +870,8 @@ function PartidosDelDia({users, predictions, results}) {
     return new Date(2026, mMonth - 1, mDay, mHour, mMin, 0);
   }
 
-  const todayMatches = GROUP_MATCHES.filter(m => {
+  const allMatchesToday = [...GROUP_MATCHES, ...KNOCKOUT_MATCHES];
+  const todayMatches = allMatchesToday.filter(m => {
     const matchDate = matchToDate(m);
     if (!matchDate) return false;
     return matchDate >= journeyStart && matchDate < journeyEnd;
@@ -915,6 +953,7 @@ function PartidosDelDia({users, predictions, results}) {
   );
 }
 
+
 // ─────────────────────────────────────────────
 // PREDICCIONES (ver las de otros)
 // ─────────────────────────────────────────────
@@ -963,7 +1002,7 @@ function VerPredicciones({currentUser, users, predictions, specials, results, gr
                   <div style={{fontSize:11,fontWeight:700,color:C.gold,letterSpacing:3,textTransform:"uppercase",margin:"0 0 10px"}}>Grupo {grp}</div>
                   {GROUP_MATCHES.filter(m=>m.group===grp).map(m=>{
                     const pred = getPred(m.id);
-                    const res = results[m.id];
+                    const res = results[m.id] || (m.result);
                     const pts = pred && res?.home_score!=null ? scoreMatch(pred, res, m.round) : null;
                     const maxPts = 3*(MULT[m.round]||1);
                     const bg = pts===maxPts?"rgba(61,214,140,0.07)":pts>0?"rgba(240,192,64,0.07)":pts===0&&res?"rgba(248,113,113,0.06)":C.surface;
@@ -1013,7 +1052,7 @@ function VerPredicciones({currentUser, users, predictions, specials, results, gr
                         </div>
                         {ms.map(m=>{
                           const pred = getPred(m.id);
-                          const res = results[m.id];
+                          const res = results[m.id] || (m.result);
                           const pts = pred && res?.home_score!=null ? scoreMatch(pred, res, m.round) : null;
                           const maxPts = 3*(MULT[m.round]||1);
                           const bg = pts===maxPts?"rgba(61,214,140,0.07)":pts>0?"rgba(240,192,64,0.07)":pts===0&&res?"rgba(248,113,113,0.06)":C.surface;
@@ -1076,6 +1115,7 @@ export default function App() {
   const [specials,setSpecials]=useState([]);
   const [actualSpecials,setActualSpecials]=useState({});
   const [groupsLocked,setGroupsLocked]=useState(false);
+  const [koLocked,setKoLocked]=useState({});
   const [ready,setReady]=useState(false);
 
   useEffect(()=>{
@@ -1104,6 +1144,11 @@ export default function App() {
       });
       setActualSpecials(specObj);
       setGroupsLocked(stMap.groups_locked==="true");
+      const koLockedMap = {};
+      Object.keys(stMap).forEach(k => {
+        if (k.startsWith("ko_locked_")) koLockedMap[k.replace("ko_locked_","")] = stMap[k]==="true";
+      });
+      setKoLocked(koLockedMap);
 
       // Fetch live results from football-data.org
       const liveMatches = await fetchLiveResults();
@@ -1206,7 +1251,7 @@ export default function App() {
         {tab==="instrucciones"&&<Instrucciones/>}
         {tab==="clasificacion"&&<Clasificacion users={users} predictions={predictions} results={results} specials={specials} actualSpecials={actualSpecials}/>}
         {tab==="grupos"&&<PredGrupos currentUser={user} predictions={predictions} setPredictions={setPredictions} results={results} locked={groupsLocked}/>}
-        {tab==="eliminatoria"&&<Eliminatoria currentUser={user} predictions={predictions} setPredictions={setPredictions} results={results}/>}
+        {tab==="eliminatoria"&&<Eliminatoria currentUser={user} predictions={predictions} setPredictions={setPredictions} results={results} koLocked={koLocked} setKoLocked={setKoLocked} isAdmin={user.is_admin}/>}
         {tab==="especiales"&&<PredEspeciales currentUser={user} specials={specials} setSpecials={setSpecials} locked={groupsLocked} actualSpecials={actualSpecials}/>}
         {tab==="historial"&&<Historial currentUser={user} predictions={predictions} results={results} specials={specials} actualSpecials={actualSpecials}/>}
         {tab==="partidos"&&<PartidosDelDia users={users} predictions={predictions} results={results}/> }
