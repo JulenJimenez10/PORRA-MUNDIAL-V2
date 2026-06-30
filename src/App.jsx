@@ -298,6 +298,119 @@ function Alert({children}) {
   return <div style={{background:C.goldDim,border:`1px solid ${C.goldBorder}`,borderRadius:10,padding:"10px 14px",color:C.gold,fontSize:13,marginBottom:16}}>{children}</div>;
 }
 
+
+function Announcement({onClose}) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => { setTimeout(() => setVisible(true), 100); }, []);
+
+  const handleClose = () => {
+    setVisible(false);
+    setTimeout(onClose, 400);
+  };
+
+  return (
+    <div style={{
+      position:"fixed", inset:0, zIndex:9999,
+      background:"rgba(0,0,0,0.85)",
+      display:"flex", alignItems:"center", justifyContent:"center",
+      padding:20,
+      opacity: visible ? 1 : 0,
+      transition: "opacity 0.4s ease",
+    }}>
+      <style>{`
+        @keyframes shake {
+          0%,100%{transform:rotate(-1deg) scale(1)}
+          25%{transform:rotate(1.5deg) scale(1.02)}
+          50%{transform:rotate(-1.5deg) scale(1.02)}
+          75%{transform:rotate(1deg) scale(1)}
+        }
+        @keyframes glow {
+          0%,100%{box-shadow:0 0 20px rgba(240,192,64,0.4), 0 0 60px rgba(240,192,64,0.1)}
+          50%{box-shadow:0 0 40px rgba(240,192,64,0.8), 0 0 100px rgba(240,192,64,0.3)}
+        }
+        @keyframes stamp {
+          0%{transform:scale(4) rotate(-20deg);opacity:0}
+          60%{transform:scale(0.9) rotate(3deg);opacity:1}
+          80%{transform:scale(1.05) rotate(-1deg)}
+          100%{transform:scale(1) rotate(0deg);opacity:1}
+        }
+        @keyframes fadeUp {
+          from{transform:translateY(20px);opacity:0}
+          to{transform:translateY(0);opacity:1}
+        }
+      `}</style>
+      <div style={{
+        maxWidth:480, width:"100%",
+        background:"linear-gradient(135deg,#0d1a2e,#1a0d2e)",
+        border:"2px solid #f0c040",
+        borderRadius:20,
+        padding:"32px 28px",
+        textAlign:"center",
+        animation: visible ? "shake 0.6s ease 0.3s, glow 2s ease-in-out 0.8s infinite" : "none",
+        position:"relative",
+        overflow:"hidden",
+      }}>
+        {/* Sello */}
+        <div style={{
+          position:"absolute", top:16, right:16,
+          width:70, height:70,
+          border:"3px solid rgba(240,50,50,0.8)",
+          borderRadius:"50%",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          animation: visible ? "stamp 0.5s ease 0.8s both" : "none",
+          transform:"rotate(-15deg)",
+        }}>
+          <span style={{fontSize:10, fontWeight:900, color:"rgba(240,50,50,0.9)", letterSpacing:1, textAlign:"center", lineHeight:1.2}}>DECRETO OFICIAL</span>
+        </div>
+
+        {/* Emoji */}
+        <div style={{fontSize:52, marginBottom:12, animation: visible ? "fadeUp 0.5s ease 0.2s both" : "none"}}>
+          👑
+        </div>
+
+        {/* Título */}
+        <div style={{
+          fontSize:13, fontWeight:900, color:"#f0c040",
+          letterSpacing:4, textTransform:"uppercase",
+          marginBottom:16,
+          animation: visible ? "fadeUp 0.5s ease 0.3s both" : "none",
+        }}>
+          ⚠️ Aviso Oficial ⚠️
+        </div>
+
+        {/* Mensaje */}
+        <div style={{
+          fontSize:16, fontWeight:600, color:"#f1f5f9",
+          lineHeight:1.7, marginBottom:24,
+          animation: visible ? "fadeUp 0.5s ease 0.4s both" : "none",
+        }}>
+          Cualquier tipo de <strong style={{color:"#f0c040"}}>queja o vacile</strong> al todo poderoso administrador y dictador de la porra, será sancionado con{" "}
+          <strong style={{color:"#f87171", fontSize:18}}>20 puntos de penalización</strong>{" "}
+          y un <strong style={{color:"#f87171"}}>azote en las nalgas</strong>. 🍑
+        </div>
+
+        {/* Firma */}
+        <div style={{
+          fontSize:11, color:"rgba(255,255,255,0.3)",
+          marginBottom:24, fontStyle:"italic",
+          animation: visible ? "fadeUp 0.5s ease 0.5s both" : "none",
+        }}>
+          — El Administrador Supremo
+        </div>
+
+        {/* Botón */}
+        <button onClick={handleClose} style={{
+          ...btnGold,
+          animation: visible ? "fadeUp 0.5s ease 0.6s both" : "none",
+          fontSize:14,
+        }}>
+          Entendido, me callo 🤐
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────
 // AUTH
 // ─────────────────────────────────────────────
@@ -1373,6 +1486,7 @@ export default function App() {
   const [groupsLocked,setGroupsLocked]=useState(false);
   const [koLocked,setKoLocked]=useState({});
   const [ready,setReady]=useState(false);
+  const [showAnnouncement,setShowAnnouncement]=useState(false);
 
   useEffect(()=>{
     (async()=>{
@@ -1418,9 +1532,10 @@ export default function App() {
 
   if (!user) return (
     <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.bg} 0%,#0d1a2e 50%,#1a0d2e 100%)`,fontFamily:"'Plus Jakarta Sans',sans-serif",color:C.text}}>
+      {showAnnouncement&&<Announcement onClose={()=>setShowAnnouncement(false)}/>}
       <Stars/>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');*{box-sizing:border-box}input[type=number]{-moz-appearance:textfield}input::-webkit-inner-spin-button{-webkit-appearance:none}@keyframes twkl{from{opacity:.15}to{opacity:.7}}`}</style>
-      <div style={{position:"relative",zIndex:1}}><AuthScreen onLogin={u=>{setUser(u);setUsers(prev=>prev.find(x=>x.username===u.username)?prev:[...prev,u]);}}/></div>
+      <div style={{position:"relative",zIndex:1}}><AuthScreen onLogin={u=>{setUser(u);setShowAnnouncement(true);setUsers(prev=>prev.find(x=>x.username===u.username)?prev:[...prev,u]);}}/></div>
     </div>
   );
 
@@ -1428,6 +1543,7 @@ export default function App() {
 
   return (
     <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.bg} 0%,#0d1a2e 50%,#1a0d2e 100%)`,fontFamily:"'Plus Jakarta Sans',sans-serif",color:C.text}}>
+      {showAnnouncement&&<Announcement onClose={()=>setShowAnnouncement(false)}/>}
       <Stars/>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');*{box-sizing:border-box}input[type=number]{-moz-appearance:textfield}input::-webkit-inner-spin-button{-webkit-appearance:none}@keyframes twkl{from{opacity:.15}to{opacity:.7}}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(240,192,64,.3);border-radius:4px}select option{background:#0d1120;color:#f1f5f9}`}</style>
       <div style={{position:"sticky",top:0,zIndex:100,background:"rgba(8,12,20,0.94)",backdropFilter:"blur(18px)",borderBottom:`1px solid ${C.border}`}}>
