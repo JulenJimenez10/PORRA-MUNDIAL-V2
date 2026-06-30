@@ -837,7 +837,6 @@ function Historial({currentUser,predictions,results,specials,actualSpecials}) {
 function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked,setGroupsLocked}) {
   const [localSpec,setLocalSpec]=useState(actualSpecials||{});
   const [specSaved,setSpecSaved]=useState(false);
-  const [ko,setKo]=useState({home:"",away:"",hScore:"",aScore:"",round:"r32"});
 
   const toggleLock = async () => {
     const v=!groupsLocked;
@@ -854,13 +853,12 @@ function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked
   };
 
   const updateKORes = async (id, home, away, winner) => {
-    const updateData = {match_id:id, home_score:parseInt(home)||0, away_score:parseInt(away)||0};
-    if (winner !== undefined) updateData.winner = winner;
+    const updateData = {match_id:id, home_score:parseInt(home)||0, away_score:parseInt(away)||0, winner: winner ?? null};
     await supabase.from("results").upsert(updateData, {onConflict:"match_id"});
     const {data} = await supabase.from("results").select("*");
-    const map = {...results};
+    const map = {};
     (data||[]).forEach(r => { map[r.match_id] = r; });
-    setResults(map);
+    setResults(prev => ({...prev, ...map}));
   };
 
   const saveSpec = async () => {
@@ -869,21 +867,6 @@ function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked
     }
     setActualSpecials(localSpec);
     setSpecSaved(true); setTimeout(()=>setSpecSaved(false),2000);
-  };
-
-  const addKO = async () => {
-    if (!ko.home||!ko.away) return;
-    const id=`ko_${Date.now()}`;
-    const nm={id,home:ko.home,away:ko.away,round:ko.round};
-    const kms=[...(results.knockoutMatches||[]),nm];
-    await supabase.from("settings").upsert({key:"knockout_matches",value:JSON.stringify(kms)});
-    const newResults={...results,knockoutMatches:kms};
-    if (ko.hScore!==""&&ko.aScore!=="") {
-      await supabase.from("results").upsert({match_id:id,home_score:parseInt(ko.hScore),away_score:parseInt(ko.aScore)},{onConflict:"match_id"});
-      newResults[id]={home_score:parseInt(ko.hScore),away_score:parseInt(ko.aScore)};
-    }
-    setResults(newResults);
-    setKo({home:"",away:"",hScore:"",aScore:"",round:"r32"});
   };
 
 
@@ -919,32 +902,6 @@ function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked
           </div>
         ))}
       </div>
-      <div style={{...card,marginBottom:16}}>
-        <div style={{fontSize:11,fontWeight:700,color:C.gold,letterSpacing:3,textTransform:"uppercase",marginBottom:12}}>Fase Eliminatoria</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>
-          <select value={ko.round} onChange={e=>setKo(k=>({...k,round:e.target.value}))} style={{...inp,width:"auto",flex:"none"}}>
-            <option value="r32">Dieciseisavos</option><option value="r16">Octavos</option>
-            <option value="qf">Cuartos</option><option value="sf">Semis</option><option value="final">Final</option>
-          </select>
-          <select value={ko.home} onChange={e=>setKo(k=>({...k,home:e.target.value}))} style={{...inp,flex:1,minWidth:120}}>
-            <option value="">Local...</option>{TEAMS.map(t=><option key={t} value={t}>{t}</option>)}
-          </select>
-          <select value={ko.away} onChange={e=>setKo(k=>({...k,away:e.target.value}))} style={{...inp,flex:1,minWidth:120}}>
-            <option value="">Visitante...</option>{TEAMS.map(t=><option key={t} value={t}>{t}</option>)}
-          </select>
-          <input type="number" placeholder="G.L" value={ko.hScore} onChange={e=>setKo(k=>({...k,hScore:e.target.value}))} style={{...inp,width:52,padding:"6px 4px",textAlign:"center"}}/>
-          <input type="number" placeholder="G.V" value={ko.aScore} onChange={e=>setKo(k=>({...k,aScore:e.target.value}))} style={{...inp,width:52,padding:"6px 4px",textAlign:"center"}}/>
-          <button onClick={addKO} style={{...btnGold,width:"auto",padding:"10px 16px"}}>Añadir</button>
-        </div>
-        {(results.knockoutMatches||[]).map(m=>(
-          <div key={m.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
-            <span style={{flex:1,fontSize:12,color:C.muted}}>[{ROUND_LABEL[m.round]}] {m.home} vs {m.away}</span>
-            <input type="number" min="0" defaultValue={results[m.id]?.home_score??""} placeholder="L" style={{...inp,width:44,padding:"6px 4px",textAlign:"center"}} onChange={e=>updateKORes(m.id,e.target.value,results[m.id]?.away_score??0)}/>
-            <span style={{color:C.gold}}>:</span>
-            <input type="number" min="0" defaultValue={results[m.id]?.away_score??""} placeholder="V" style={{...inp,width:44,padding:"6px 4px",textAlign:"center"}} onChange={e=>updateKORes(m.id,results[m.id]?.home_score??0,e.target.value)}/>
-          </div>
-        ))}
-      </div>
       {/* Knockout Results */}
       <div style={{...card, marginBottom:16}}>
         <div style={{fontSize:11,fontWeight:700,color:C.gold,letterSpacing:3,textTransform:"uppercase",marginBottom:12}}>Resultados — Eliminatoria</div>
@@ -972,7 +929,10 @@ function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked
                       <span style={{color:C.muted,fontSize:12,marginLeft:8}}>¿Quién pasa? (si empate o penaltis)</span>
                       <select
                         value={results[m.id]?.winner||""}
-                        onChange={e=>updateKORes(m.id,results[m.id]?.home_score??0,results[m.id]?.away_score??0,e.target.value||null)}
+                        onChange={e=>{
+                          const val = e.target.value || null;
+                          updateKORes(m.id, results[m.id]?.home_score??0, results[m.id]?.away_score??0, val);
+                        }}
                         style={{...inp,flex:1,minWidth:120}}>
                         <option value="">— Sin especificar —</option>
                         <option value="home">{m.home}</option>
