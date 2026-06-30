@@ -535,7 +535,7 @@ function PredGrupos({currentUser,predictions,setPredictions,results,locked}) {
         winner: pred.winner || null,
       }, {onConflict:"username,match_id"});
     }
-    const {data} = await supabase.from("predictions").select("*");
+    const {data} = await supabase.from("predictions").select("*").range(0, 9999);
     setPredictions(data||[]);
     setSaving(false); setSaved(true); setTimeout(()=>setSaved(false),2000);
   };
@@ -654,7 +654,7 @@ function Eliminatoria({currentUser, predictions, setPredictions, results, koLock
         winner: pred.winner || null,
       }, {onConflict: "username,match_id"});
     }
-    const {data} = await supabase.from("predictions").select("*");
+    const {data} = await supabase.from("predictions").select("*").range(0, 9999);
     setPredictions(data || []);
     setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000);
   };
@@ -1408,7 +1408,7 @@ export default function App() {
     (async()=>{
       const [{data:u},{data:p},{data:r},{data:s},{data:st}] = await Promise.all([
         supabase.from("users").select("*"),
-        supabase.from("predictions").select("*"),
+        supabase.from("predictions").select("*").range(0, 9999),
         supabase.from("results").select("*"),
         supabase.from("specials").select("*"),
         supabase.from("settings").select("*"),
