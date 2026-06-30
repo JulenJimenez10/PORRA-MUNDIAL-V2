@@ -1435,9 +1435,11 @@ export default function App() {
         if (k.startsWith("ko_locked_")) koLockedMap[k.replace("ko_locked_","")] = stMap[k]==="true";
       });
       setKoLocked(koLockedMap);
+      setReady(true);
 
-      // Fetch live results from football-data.org
-      const liveMatches = await fetchLiveResults();
+      // Fetch live results from football-data.org (best-effort, won't block UI)
+      let liveMatches = null;
+      try { liveMatches = await fetchLiveResults(); } catch(e) { liveMatches = null; }
       if (liveMatches && liveMatches.length > 0) {
         for (const lm of liveMatches) {
           const homeTeam = mapTeam(lm.homeTeam?.name || "");
@@ -1459,37 +1461,37 @@ export default function App() {
         }
         setResults({...resMap});
       }
-
-      setReady(true);
     })();
 
     // Refresh every 3 minutes
     const interval = setInterval(async () => {
-      const liveMatches = await fetchLiveResults();
-      if (!liveMatches) return;
-      const {data:r} = await supabase.from("results").select("*");
-      const resMap = {knockoutMatches:[]};
-      const {data:st} = await supabase.from("settings").select("*");
-      const stMap = {};
-      (st||[]).forEach(row=>{stMap[row.key]=row.value;});
-      if (stMap.knockout_matches) { try { resMap.knockoutMatches=JSON.parse(stMap.knockout_matches); } catch {} }
-      (r||[]).forEach(row=>{resMap[row.match_id]=row;});
-      for (const lm of liveMatches) {
-        const homeTeam = mapTeam(lm.homeTeam?.name || "");
-        const awayTeam = mapTeam(lm.awayTeam?.name || "");
-        const homeScore = lm.score?.fullTime?.home;
-        const awayScore = lm.score?.fullTime?.away;
-        if (homeScore == null || awayScore == null) continue;
-        const match = GROUP_MATCHES.find(m => m.home === homeTeam && m.away === awayTeam);
-        if (match) {
-          await supabase.from("results").upsert(
-            {match_id: match.id, home_score: homeScore, away_score: awayScore},
-            {onConflict: "match_id"}
-          );
-          resMap[match.id] = {home_score: homeScore, away_score: awayScore};
+      try {
+        const liveMatches = await fetchLiveResults();
+        if (!liveMatches) return;
+        const {data:r} = await supabase.from("results").select("*");
+        const resMap = {knockoutMatches:[]};
+        const {data:st} = await supabase.from("settings").select("*");
+        const stMap = {};
+        (st||[]).forEach(row=>{stMap[row.key]=row.value;});
+        if (stMap.knockout_matches) { try { resMap.knockoutMatches=JSON.parse(stMap.knockout_matches); } catch {} }
+        (r||[]).forEach(row=>{resMap[row.match_id]=row;});
+        for (const lm of liveMatches) {
+          const homeTeam = mapTeam(lm.homeTeam?.name || "");
+          const awayTeam = mapTeam(lm.awayTeam?.name || "");
+          const homeScore = lm.score?.fullTime?.home;
+          const awayScore = lm.score?.fullTime?.away;
+          if (homeScore == null || awayScore == null) continue;
+          const match = GROUP_MATCHES.find(m => m.home === homeTeam && m.away === awayTeam);
+          if (match) {
+            await supabase.from("results").upsert(
+              {match_id: match.id, home_score: homeScore, away_score: awayScore},
+              {onConflict: "match_id"}
+            );
+            resMap[match.id] = {home_score: homeScore, away_score: awayScore};
+          }
         }
-      }
-      setResults({...resMap});
+        setResults({...resMap});
+      } catch (e) { /* ignore CORS/network errors */ }
     }, 3 * 60 * 1000);
 
     return () => clearInterval(interval);
