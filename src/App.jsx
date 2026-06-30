@@ -188,26 +188,64 @@ function scoreMatch(pred, result, round) {
   const rh = parseInt(result.home_score), ra = parseInt(result.away_score);
   if (isNaN(ph)||isNaN(pa)) return 0;
 
-  // Exact score (90 min)
-  if (ph===rh && pa===ra) return 3*m;
-
   const isKnockout = round !== "groups";
 
-  if (isKnockout) {
-    // Who actually progressed (from result.winner field or from score)
-    const actualWinner = result.winner || (rh>ra?"home":rh<ra?"away":null);
-    // Who pred thinks progresses
-    let predWinner;
-    if (ph > pa) predWinner = "home";
-    else if (ph < pa) predWinner = "away";
-    else predWinner = pred.winner || null; // empate: usar campo winner
-    if (predWinner && actualWinner && predWinner === actualWinner) return 1*m;
+  if (!isKnockout) {
+    // Groups: simple scoring
+    if (ph===rh && pa===ra) return 3*m;
+    const pw = ph>pa?"H":ph<pa?"A":"D", rw = rh>ra?"H":rh<ra?"A":"D";
+    return pw===rw ? 1*m : 0;
+  }
+
+  // ─── KNOCKOUT SCORING ───
+  const predIsDraw = ph === pa;
+  const realIsDraw = rh === ra;
+  const exactScore = ph === rh && pa === ra;
+  const actualWinner = result.winner || (rh>ra ? "home" : rh<ra ? "away" : null);
+
+  let points = 0;
+
+  if (predIsDraw && realIsDraw) {
+    // Empate predicho y empate real
+    if (exactScore) {
+      points += 3 * m; // marcador exacto del empate
+    } else {
+      points += 1 * m; // acertó que era empate, no el marcador
+    }
+    // Bonus: acertar quién pasa
+    if (pred.winner && actualWinner && pred.winner === actualWinner) {
+      points += 1 * m;
+    }
+    return points;
+  }
+
+  if (!predIsDraw && exactScore) {
+    // Victoria predicha con marcador exacto (90 min terminó con ganador, no empate)
+    return 3 * m;
+  }
+
+  if (predIsDraw && !realIsDraw) {
+    // Predijo empate pero no lo fue
     return 0;
   }
 
-  // Groups: just winner/draw
-  const pw = ph>pa?"H":ph<pa?"A":"D", rw = rh>ra?"H":rh<ra?"A":"D";
-  return pw===rw ? 1*m : 0;
+  if (!predIsDraw && realIsDraw) {
+    // Predijo victoria de un equipo, pero acabó en empate (90 min)
+    // Si ese equipo pasó en penaltis/prórroga, cuenta como acierto de ganador
+    const predWinner = ph > pa ? "home" : "away";
+    if (actualWinner && predWinner === actualWinner) return 1 * m;
+    return 0;
+  }
+
+  if (!predIsDraw && !realIsDraw) {
+    // Ambos tienen ganador (sin empate a 90 min), pero marcador no exacto
+    const predWinner = ph > pa ? "home" : "away";
+    const realWinner = rh > ra ? "home" : "away";
+    if (predWinner === realWinner) return 1 * m;
+    return 0;
+  }
+
+  return 0;
 }
 
 function scoreSpecials(userSpec, actual) {
@@ -815,6 +853,16 @@ function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked
     setResults(map);
   };
 
+  const updateKORes = async (id, home, away, winner) => {
+    const updateData = {match_id:id, home_score:parseInt(home)||0, away_score:parseInt(away)||0};
+    if (winner !== undefined) updateData.winner = winner;
+    await supabase.from("results").upsert(updateData, {onConflict:"match_id"});
+    const {data} = await supabase.from("results").select("*");
+    const map = {...results};
+    (data||[]).forEach(r => { map[r.match_id] = r; });
+    setResults(map);
+  };
+
   const saveSpec = async () => {
     for (const [k,v] of Object.entries(localSpec)) {
       await supabase.from("settings").upsert({key:`special_${k}`,value:v||""});
@@ -838,13 +886,7 @@ function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked
     setKo({home:"",away:"",hScore:"",aScore:"",round:"r32"});
   };
 
-  const updateKORes = async (id,home,away) => {
-    await supabase.from("results").upsert({match_id:id,home_score:parseInt(home)||0,away_score:parseInt(away)||0},{onConflict:"match_id"});
-    const {data}=await supabase.from("results").select("*");
-    const map={knockoutMatches:results.knockoutMatches||[]};
-    (data||[]).forEach(r=>{map[r.match_id]=r;});
-    setResults(map);
-  };
+
 
   return (
     <div style={{paddingBottom:40}}>
@@ -903,6 +945,48 @@ function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked
           </div>
         ))}
       </div>
+      {/* Knockout Results */}
+      <div style={{...card, marginBottom:16}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.gold,letterSpacing:3,textTransform:"uppercase",marginBottom:12}}>Resultados — Eliminatoria</div>
+        <p style={{color:C.faint,fontSize:12,margin:"0 0 12px"}}>Introduce el resultado a 90 minutos. Si hay prórroga/penaltis, indica también quién pasa.</p>
+
+        {Object.entries(ROUND_LABEL).filter(([r])=>r!=="groups").map(([round,label])=>{
+          const roundMatches = KNOCKOUT_MATCHES.filter(m=>m.round===round);
+          if (!roundMatches.length) return null;
+          return (
+            <div key={round} style={{marginBottom:20}}>
+              <div style={{fontSize:11,color:C.gold,letterSpacing:2,marginBottom:8,fontWeight:700}}>{label}</div>
+              {roundMatches.map(m=>{
+                const res = results[m.id] || {};
+                return (
+                  <div key={m.id} style={{marginBottom:12,padding:"10px 12px",background:"rgba(255,255,255,0.03)",borderRadius:10,border:`1px solid ${C.border}`}}>
+                    <div style={{fontSize:12,color:C.muted,marginBottom:8}}>{FLAGS[m.home]||""} {m.home} vs {m.away} {FLAGS[m.away]||""} — {m.date} {m.time}h</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <input type="number" min="0" defaultValue={res.home_score??""} placeholder="L"
+                        style={{...inp,width:44,padding:"6px 4px",textAlign:"center"}}
+                        onChange={e=>updateKORes(m.id,e.target.value,results[m.id]?.away_score??0,results[m.id]?.winner)}/>
+                      <span style={{color:C.gold}}>:</span>
+                      <input type="number" min="0" defaultValue={res.away_score??""} placeholder="V"
+                        style={{...inp,width:44,padding:"6px 4px",textAlign:"center"}}
+                        onChange={e=>updateKORes(m.id,results[m.id]?.home_score??0,e.target.value,results[m.id]?.winner)}/>
+                      <span style={{color:C.muted,fontSize:12,marginLeft:8}}>¿Quién pasa? (si empate o penaltis)</span>
+                      <select
+                        value={results[m.id]?.winner||""}
+                        onChange={e=>updateKORes(m.id,results[m.id]?.home_score??0,results[m.id]?.away_score??0,e.target.value||null)}
+                        style={{...inp,flex:1,minWidth:120}}>
+                        <option value="">— Sin especificar —</option>
+                        <option value="home">{m.home}</option>
+                        <option value="away">{m.away}</option>
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
       <div style={card}>
         <div style={{fontSize:11,fontWeight:700,color:C.gold,letterSpacing:3,textTransform:"uppercase",marginBottom:12}}>Resultados Especiales</div>
         {[{f:"champion",l:"🏆 Campeón",team:true},{f:"runner_up",l:"🥈 Subcampeón",team:true},{f:"third",l:"🥉 3er puesto",team:true},{f:"top_scorer",l:"⚽ Pichichi",team:false},{f:"mvp",l:"⭐ MVP",team:false}].map(({f,l,team})=>(
