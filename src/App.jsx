@@ -977,20 +977,7 @@ function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked
 // PARTIDOS DEL DÍA
 // ─────────────────────────────────────────────
 function PartidosDelDia({users, predictions, results, currentUser, groupsLocked, koLocked, isAdmin}) {
-  const now = new Date();
   const monthNames = ["","ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-
-  // La jornada va de las 00:00h del día X a las 06:01h del día X+1
-  // Si son antes de las 06:01h, seguimos en la jornada de ayer
-  const journeyStart = new Date(now);
-  if (now.getHours() < 6 || (now.getHours() === 6 && now.getMinutes() === 0)) {
-    journeyStart.setDate(journeyStart.getDate() - 1);
-  }
-  journeyStart.setHours(0, 0, 0, 0);
-
-  const journeyEnd = new Date(journeyStart);
-  journeyEnd.setDate(journeyEnd.getDate() + 1);
-  journeyEnd.setHours(6, 1, 0, 0);
 
   // Convierte fecha y hora del partido a objeto Date para comparar
   function matchToDate(m) {
@@ -999,31 +986,87 @@ function PartidosDelDia({users, predictions, results, currentUser, groupsLocked,
     const mDay = parseInt(parts[0]);
     const mMonth = monthNames.indexOf(parts[1]);
     const [mHour, mMin] = m.time.split(":").map(Number);
-    // Año 2026
     return new Date(2026, mMonth - 1, mDay, mHour, mMin, 0);
   }
 
-  const allMatchesToday = [...GROUP_MATCHES, ...KNOCKOUT_MATCHES];
-  const todayMatches = allMatchesToday.filter(m => {
+  const allMatchesAll = [...GROUP_MATCHES, ...KNOCKOUT_MATCHES];
+
+  // Calcula la jornada (día de referencia) inicial: hoy
+  const computeInitialDay = () => {
+    const now = new Date();
+    const d = new Date(now);
+    if (now.getHours() < 6 || (now.getHours() === 6 && now.getMinutes() === 0)) {
+      d.setDate(d.getDate() - 1);
+    }
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const [refDay, setRefDay] = useState(computeInitialDay());
+
+  // Límites de navegación
+  const MIN_DAY = new Date(2026, 5, 28); // 28 jun 2026 (inicio dieciseisavos)
+  MIN_DAY.setHours(0,0,0,0);
+
+  const lastKnownMatch = allMatchesAll.reduce((latest, m) => {
+    const d = matchToDate(m);
+    if (!d) return latest;
+    return (!latest || d > latest) ? d : latest;
+  }, null);
+  const MAX_DAY = lastKnownMatch ? new Date(lastKnownMatch) : new Date(2026, 5, 28);
+  MAX_DAY.setHours(0, 0, 0, 0);
+
+  const journeyStart = new Date(refDay);
+  const journeyEnd = new Date(refDay);
+  journeyEnd.setDate(journeyEnd.getDate() + 1);
+  journeyEnd.setHours(6, 1, 0, 0);
+
+  const todayMatches = allMatchesAll.filter(m => {
     const matchDate = matchToDate(m);
     if (!matchDate) return false;
     return matchDate >= journeyStart && matchDate < journeyEnd;
-  }).sort((a, b) => {
-    const da = matchToDate(a);
-    const db = matchToDate(b);
-    return da - db;
-  });
+  }).sort((a, b) => matchToDate(a) - matchToDate(b));
 
-  const usernames = users.map(u => u.username);
+  const canGoBack = refDay > MIN_DAY;
+  const canGoForward = refDay < MAX_DAY;
+
+  const goBack = () => {
+    if (!canGoBack) return;
+    const d = new Date(refDay);
+    d.setDate(d.getDate() - 1);
+    setRefDay(d);
+  };
+  const goForward = () => {
+    if (!canGoForward) return;
+    const d = new Date(refDay);
+    d.setDate(d.getDate() + 1);
+    setRefDay(d);
+  };
+
+  const dayLabel = refDay.toLocaleDateString("es-ES", { weekday:"long", day:"numeric", month:"long" });
 
   return (
     <div style={{paddingBottom:40}}>
       <SectionTitle>📅 Partidos del día</SectionTitle>
 
+      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, gap:10}}>
+        <button onClick={goBack} disabled={!canGoBack} style={{
+          ...btnSmall, fontSize:18, padding:"8px 14px",
+          opacity: canGoBack ? 1 : 0.3, cursor: canGoBack ? "pointer" : "default"
+        }}>‹</button>
+        <div style={{flex:1, textAlign:"center", fontSize:14, fontWeight:700, color:C.gold, textTransform:"capitalize"}}>
+          {dayLabel}
+        </div>
+        <button onClick={goForward} disabled={!canGoForward} style={{
+          ...btnSmall, fontSize:18, padding:"8px 14px",
+          opacity: canGoForward ? 1 : 0.3, cursor: canGoForward ? "pointer" : "default"
+        }}>›</button>
+      </div>
+
       {todayMatches.length === 0 && (
         <div style={{...card, textAlign:"center", padding:48}}>
           <div style={{fontSize:44, marginBottom:12}}>🏖️</div>
-          <p style={{color:C.muted, margin:0}}>Hoy no hay partidos. ¡Descansa!</p>
+          <p style={{color:C.muted, margin:0}}>No hay partidos este día.</p>
         </div>
       )}
 
@@ -1032,9 +1075,9 @@ function PartidosDelDia({users, predictions, results, currentUser, groupsLocked,
         return (
           <div key={m.id} style={{...card, marginBottom:20}}>
             {/* Match header */}
-            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
-              <div style={{display:"flex", gap:8, alignItems:"center"}}>
-                <span style={{fontSize:11, fontWeight:700, color:C.gold, letterSpacing:2}}>GRUPO {m.group}</span>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, flexWrap:"wrap", gap:8}}>
+              <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap"}}>
+                <span style={{fontSize:11, fontWeight:700, color:C.gold, letterSpacing:2}}>{m.round==="groups" ? `GRUPO ${m.group}` : ROUND_LABEL[m.round].toUpperCase()}</span>
                 <Tag>🕐 {m.time}h</Tag>
                 <Tag>📍 {m.city}</Tag>
               </div>
@@ -1229,6 +1272,111 @@ function VerPredicciones({currentUser, users, predictions, specials, results, gr
   );
 }
 
+
+function VerPrediccionesEliminatoria({currentUser, users, predictions, results, koLocked, isAdmin}) {
+  const [selected, setSelected] = useState("");
+  const [selectedRound, setSelectedRound] = useState("r32");
+
+  const selectedUser = users.find(u => u.username === selected);
+  const userPreds = predictions.filter(p => p.username === selected);
+  const getPred = (matchId) => userPreds.find(p => p.match_id === matchId);
+
+  const roundMatches = KNOCKOUT_MATCHES.filter(m => m.round === selectedRound);
+  const anyMatchOpen = roundMatches.some(m => !(koLocked && koLocked[m.id]));
+
+  return (
+    <div style={{paddingBottom:40}}>
+      <SectionTitle>🔍 Predicciones Eliminatoria</SectionTitle>
+
+      <div style={{...card, marginBottom:20}}>
+        <label style={{color:C.muted, fontSize:12, letterSpacing:1, textTransform:"uppercase", display:"block", marginBottom:8}}>Ver predicciones de:</label>
+        <select value={selected} onChange={e=>setSelected(e.target.value)} style={inp}>
+          <option value="">— Elige un jugador —</option>
+          {users.filter(u=>u.username!==currentUser.username).map(u=>(
+            <option key={u.username} value={u.username}>{u.display_name||u.username}</option>
+          ))}
+        </select>
+      </div>
+
+      <div style={{display:"flex", gap:6, marginBottom:20, flexWrap:"wrap"}}>
+        {Object.entries(ROUND_LABEL).filter(([r]) => r !== "groups").map(([round, label]) => (
+          <button key={round} onClick={() => setSelectedRound(round)} style={{
+            padding:"7px 14px", borderRadius:20, border:"none", cursor:"pointer",
+            fontFamily:"inherit", fontSize:12, fontWeight:selectedRound===round?700:400,
+            background:selectedRound===round?C.gold:"rgba(255,255,255,0.07)",
+            color:selectedRound===round?"#0a0d14":C.muted, transition:"all .15s"
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {selected && (
+        <>
+          <div style={{...card, marginBottom:20, background:"rgba(240,192,64,0.08)", border:`1px solid ${C.goldBorder}`, display:"flex", alignItems:"center", gap:12}}>
+            <span style={{fontSize:28}}>👤</span>
+            <div>
+              <div style={{fontWeight:800, fontSize:17, color:C.gold}}>{selectedUser?.display_name||selected}</div>
+              <div style={{fontSize:12, color:C.faint}}>Predicciones {ROUND_LABEL[selectedRound]}</div>
+            </div>
+          </div>
+
+          {roundMatches.length === 0 && (
+            <div style={{...card, textAlign:"center", padding:40}}>
+              <div style={{fontSize:40, marginBottom:10}}>⏳</div>
+              <p style={{color:C.muted, margin:0}}>Los cruces de esta ronda aún no se han anunciado.</p>
+            </div>
+          )}
+
+          {roundMatches.map(m => {
+            const matchLocked = koLocked && koLocked[m.id];
+            const canView = matchLocked || isAdmin;
+            const pred = getPred(m.id);
+            const res = results[m.id];
+            const pts = pred && res?.home_score != null ? scoreMatch(pred, res, m.round) : null;
+            const maxPts = 3*(MULT[m.round]||1);
+            const bg = pts===maxPts?"rgba(61,214,140,0.07)":pts>0?"rgba(240,192,64,0.07)":pts===0&&res?"rgba(248,113,113,0.06)":C.surface;
+
+            if (!canView) {
+              return (
+                <div key={m.id} style={{...card, padding:"12px", marginBottom:8, textAlign:"center"}}>
+                  <div style={{fontSize:12, color:C.muted, marginBottom:4}}>{FLAGS[m.home]||""} {m.home} vs {m.away} {FLAGS[m.away]||""}</div>
+                  <Tag color={C.red}>🔒 Predicciones aún no cerradas</Tag>
+                </div>
+              );
+            }
+
+            return (
+              <div key={m.id} style={{...card, padding:"8px 12px", marginBottom:6, background:bg}}>
+                <div style={{fontSize:10,color:C.faint,marginBottom:5,display:"flex",gap:8}}>
+                  <span>📅 {m.date}</span><span>🕐 {m.time}h</span><span>📍 {m.city}</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                  <span style={{flex:1,fontSize:13,fontWeight:600,color:C.text,minWidth:90}}>{FLAGS[m.home]||""} {m.home}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{width:44,padding:"7px 4px",textAlign:"center",background:"rgba(255,255,255,0.04)",border:`1px solid ${C.border}`,borderRadius:8,color:C.text,fontSize:17,fontWeight:700}}>{pred?.home_score??"-"}</div>
+                    <span style={{color:C.gold,fontWeight:900,fontSize:16}}>:</span>
+                    <div style={{width:44,padding:"7px 4px",textAlign:"center",background:"rgba(255,255,255,0.04)",border:`1px solid ${C.border}`,borderRadius:8,color:C.text,fontSize:17,fontWeight:700}}>{pred?.away_score??"-"}</div>
+                  </div>
+                  <span style={{flex:1,fontSize:13,fontWeight:600,color:C.text,textAlign:"right",minWidth:90}}>{m.away} {FLAGS[m.away]||""}</span>
+                  {res?.home_score!=null && (
+                    <span style={{fontSize:11,minWidth:70,textAlign:"right",color:pts===maxPts?C.green:pts>0?C.gold:C.red}}>
+                      {res.home_score}:{res.away_score} {pts!=null?`+${pts}p`:""}
+                    </span>
+                  )}
+                </div>
+                {pred?.winner && (
+                  <div style={{marginTop:6, fontSize:11, color:C.gold}}>
+                    ⚠️ En caso de empate, pasa: <strong>{pred.winner==="home"?m.home:m.away}</strong>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────
 // APP
 // ─────────────────────────────────────────────
@@ -1240,7 +1388,8 @@ const ALL_TABS = [
   {id:"eliminatoria",label:"🥊 Eliminatoria"},
   {id:"especiales",label:"🌟 Especiales"},
   {id:"historial",label:"📊 Historial"},
-  {id:"predicciones",label:"🔍 Predicciones"},
+  {id:"predicciones",label:"🔍 Predicciones Grupos"},
+  {id:"prediccionesko",label:"🔍 Predicciones Eliminatoria"},
 ];
 
 export default function App() {
@@ -1393,6 +1542,7 @@ export default function App() {
         {tab==="historial"&&<Historial currentUser={user} predictions={predictions} results={results} specials={specials} actualSpecials={actualSpecials}/>}
         {tab==="partidos"&&<PartidosDelDia users={users} predictions={predictions} results={results} currentUser={user} groupsLocked={groupsLocked} koLocked={koLocked} isAdmin={user.is_admin}/> }
         {tab==="predicciones"&&<VerPredicciones currentUser={user} users={users} predictions={predictions} specials={specials} results={results} groupsLocked={groupsLocked}/>}
+        {tab==="prediccionesko"&&<VerPrediccionesEliminatoria currentUser={user} users={users} predictions={predictions} results={results} koLocked={koLocked} isAdmin={user.is_admin}/>}
         {tab==="admin"&&user.is_admin&&<Admin results={results} setResults={setResults} actualSpecials={actualSpecials} setActualSpecials={setActualSpecials} groupsLocked={groupsLocked} setGroupsLocked={setGroupsLocked}/>}
       </div>
     </div>
