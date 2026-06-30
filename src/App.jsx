@@ -926,18 +926,22 @@ function Admin({results,setResults,actualSpecials,setActualSpecials,groupsLocked
                       <input type="number" min="0" defaultValue={res.away_score??""} placeholder="V"
                         style={{...inp,width:44,padding:"6px 4px",textAlign:"center"}}
                         onChange={e=>updateKORes(m.id,results[m.id]?.home_score??0,e.target.value,results[m.id]?.winner)}/>
-                      <span style={{color:C.muted,fontSize:12,marginLeft:8}}>¿Quién pasa? (si empate o penaltis)</span>
-                      <select
-                        value={results[m.id]?.winner||""}
-                        onChange={e=>{
-                          const val = e.target.value || null;
-                          updateKORes(m.id, results[m.id]?.home_score??0, results[m.id]?.away_score??0, val);
-                        }}
-                        style={{...inp,flex:1,minWidth:120}}>
-                        <option value="">— Sin especificar —</option>
-                        <option value="home">{m.home}</option>
-                        <option value="away">{m.away}</option>
-                      </select>
+                      {res.home_score != null && res.away_score != null && parseInt(res.home_score) === parseInt(res.away_score) && (
+                        <>
+                          <span style={{color:C.gold,fontSize:12,marginLeft:8,fontWeight:700}}>⚠️ Empate — ¿Quién pasa?</span>
+                          <select
+                            value={results[m.id]?.winner||""}
+                            onChange={e=>{
+                              const val = e.target.value || null;
+                              updateKORes(m.id, results[m.id]?.home_score??0, results[m.id]?.away_score??0, val);
+                            }}
+                            style={{...inp,flex:1,minWidth:120}}>
+                            <option value="">— Sin especificar —</option>
+                            <option value="home">{m.home}</option>
+                            <option value="away">{m.away}</option>
+                          </select>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
