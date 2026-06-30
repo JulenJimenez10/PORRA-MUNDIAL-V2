@@ -1073,13 +1073,22 @@ function PartidosDelDia({users, predictions, results, currentUser, groupsLocked,
                       const maxPts=3*(MULT[m.round]||1);
                       const bg=pts===maxPts?"rgba(61,214,140,0.07)":pts>0?"rgba(240,192,64,0.07)":pts===0&&res?"rgba(248,113,113,0.06)":"rgba(255,255,255,0.03)";
                       const ptColor=pts===maxPts?C.green:pts>0?C.gold:res?C.red:C.faint;
+                      const isDraw = parseInt(pred.home_score)===parseInt(pred.away_score);
+                      const winnerName = pred.winner ? (pred.winner==="home" ? m.home : m.away) : null;
                       return (
-                        <div key={u.username} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 10px",borderRadius:8,background:bg}}>
-                          <span style={{fontSize:13,color:C.text,fontWeight:500}}>{u.display_name||u.username}</span>
-                          <div style={{display:"flex",alignItems:"center",gap:12}}>
-                            <span style={{fontSize:14,fontWeight:700,color:C.text}}>{pred.home_score} : {pred.away_score}</span>
-                            {pts!=null&&<span style={{fontSize:12,fontWeight:700,color:ptColor,minWidth:40,textAlign:"right"}}>+{pts}p</span>}
+                        <div key={u.username} style={{padding:"7px 10px",borderRadius:8,background:bg}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                            <span style={{fontSize:13,color:C.text,fontWeight:500}}>{u.display_name||u.username}</span>
+                            <div style={{display:"flex",alignItems:"center",gap:12}}>
+                              <span style={{fontSize:14,fontWeight:700,color:C.text}}>{pred.home_score} : {pred.away_score}</span>
+                              {pts!=null&&<span style={{fontSize:12,fontWeight:700,color:ptColor,minWidth:40,textAlign:"right"}}>+{pts}p</span>}
+                            </div>
                           </div>
+                          {m.round!=="groups" && isDraw && winnerName && (
+                            <div style={{fontSize:11,color:C.gold,marginTop:3}}>
+                              ↳ Pasa: <strong>{winnerName}</strong>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
